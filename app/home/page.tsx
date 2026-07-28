@@ -5,25 +5,56 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("Beranda");
   const [searchQuery, setSearchQuery] = useState("");
+  const [lang, setLang] = useState("ID");
+
+  const navMenus = [
+    "Beranda",
+    "Produk",
+    "Promosi",
+    "Lokasi",
+    "Ulasan",
+    "Riwayat Servis",
+    "Tips Servis Mobil",
+    "Mengenal B-Quik",
+  ];
 
   const mainSlides = [
     {
       id: 1,
       title: "ECU Remap & Dyno Tuning",
       description:
-        "Maksimalkan tenaga dan respons mesin dengan tuning presisi.",
+        "Maksimalkan tenaga dan respons mesin dengan tuning presisi tinggi.",
       image:
         "https://i.pinimg.com/736x/0f/4a/f2/0f4af2cc3a6a5829c58efdbb67d7e8b3.jpg",
       align: "left",
     },
     {
       id: 2,
-      title: "Performance Tuning",
-      description: "Tuning profesional untuk performa yang lebih optimal.",
+      title: "Performance Upgrade & Parts",
+      description:
+        "Suku cadang original dan berkualitas tinggi untuk performa maksimal.",
       image:
         "https://i.pinimg.com/736x/f1/2e/f5/f12ef578724ad14c6fc03f7aabc18ddd.jpg",
+      align: "right",
+    },
+    {
+      id: 3,
+      title: "Professional Detailing & Coating",
+      description:
+        "Lindungi cat kendaraan Anda agar tetap mengkilap dan tahan lama.",
+      image:
+        "https://images.unsplash.com/photo-1607860108855-64b2078675c1?q=80&w=1200&auto=format&fit=crop",
+      align: "left",
+    },
+    {
+      id: 4,
+      title: "Suspension & Handling Tuning",
+      description:
+        "Kenyamanan dan kestabilan berkendara di setiap medan jalan.",
+      image:
+        "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=1200&auto=format&fit=crop",
       align: "right",
     },
   ];
@@ -36,7 +67,8 @@ export default function HomePage() {
       discount: "DISKON 30%",
       buttonText: "AMBIL PROMO",
       bgGradient: "from-[#2A2A2A] via-[#1E1E1E] to-[#121212]",
-      image: "p.png",
+      image:
+        "https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=600&auto=format&fit=crop",
     },
     {
       id: 2,
@@ -47,6 +79,26 @@ export default function HomePage() {
       bgGradient: "from-[#2A2A2A] via-[#1E1E1E] to-[#121212]",
       image:
         "https://images.unsplash.com/photo-1600793575654-910699b5e4d4?q=80&w=600&auto=format&fit=crop",
+    },
+    {
+      id: 3,
+      badge: "SPECIAL BUNDLING",
+      title: "GANTI OLI + TUNE UP MESIN",
+      discount: "HEMAT HINGGA 25%",
+      buttonText: "KLAIM SEKARANG",
+      bgGradient: "from-[#331E1E] via-[#221515] to-[#121212]",
+      image:
+        "https://images.unsplash.com/photo-1511919884226-fd3cad34687c?q=80&w=600&auto=format&fit=crop",
+    },
+    {
+      id: 4,
+      badge: "MEMBER EXCLUSIVE",
+      title: "FREE CHECK-UP 32 TITIK KENDARAAN",
+      discount: "GRATIS",
+      buttonText: "DAFTAR MEMBER",
+      bgGradient: "from-[#1E2533] via-[#151922] to-[#121212]",
+      image:
+        "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=600&auto=format&fit=crop",
     },
   ];
 
@@ -68,6 +120,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex flex-col font-sans">
+      {/* 1. Header Utama */}
       <header className="sticky top-0 z-50 bg-[#121212]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-8">
@@ -77,39 +130,6 @@ export default function HomePage() {
             >
               AUTO CRAFT
             </Link>
-
-            <nav className="hidden lg:flex items-center gap-6 text-xs font-bold uppercase tracking-wider">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={`transition ${
-                  activeTab === "overview"
-                    ? "text-neutral-400"
-                    : "text-white/60 hover:text-white"
-                }`}
-              >
-                Beranda
-              </button>
-              <button
-                onClick={() => setActiveTab("services")}
-                className={`transition ${
-                  activeTab === "services"
-                    ? "text-neutral-400"
-                    : "text-white/60 hover:text-white"
-                }`}
-              >
-                Layanan
-              </button>
-              <button
-                onClick={() => setActiveTab("vehicles")}
-                className={`transition ${
-                  activeTab === "vehicles"
-                    ? "text-neutral-400"
-                    : "text-white/60 hover:text-white"
-                }`}
-              >
-                Garasi Saya
-              </button>
-            </nav>
           </div>
 
           <div className="flex-1 max-w-md mx-2 order-3 sm:order-2 w-full sm:w-auto">
@@ -138,7 +158,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3 order-2 sm:order-3">
             <Link
               href="/booking"
-              className="bg-neutral-700 hover:bg-neutral-600 text-white font-bold text-xs px-5 py-3 rounded-full transition shadow-md shadow-neutral-700/20 active:scale-95 whitespace-nowrap"
+              className="bg-neutral-700 hover:bg-neutral-600 text-white font-bold text-xs px-5 py-3 rounded-full transition shadow-md active:scale-95 whitespace-nowrap"
             >
               Booking Sekarang
             </Link>
@@ -152,8 +172,60 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-8">
-        <section className="relative overflow-hidden rounded-3xl min-h-[520px] sm:min-h-[620px] flex items-center">
+      {/* 2. Sub-Navbar (Padding atas bawah diperbesar/diberi jarak longgar) */}
+      <nav className="bg-black border-b border-white/10 px-4 sm:px-8 py-5 overflow-x-auto scrollbar-none sticky top-[73px] z-40 bg-black/95 backdrop-blur">
+        <div className="max-w-7xl mx-auto flex items-center justify-center gap-8 sm:gap-10 text-xs font-bold uppercase tracking-wider whitespace-nowrap">
+          {navMenus.map((menu) => {
+            const hasDropdown =
+              menu === "Produk" ||
+              menu === "Tips Servis Mobil" ||
+              menu === "Mengenal B-Quik";
+            return (
+              <button
+                key={menu}
+                onClick={() => setActiveTab(menu)}
+                className={`transition pb-1 flex items-center gap-1.5 ${
+                  activeTab === menu
+                    ? "text-amber-400 border-b-2 border-amber-400"
+                    : "text-white/80 hover:text-white"
+                }`}
+              >
+                {menu} {hasDropdown && <span className="text-[10px]">▼</span>}
+              </button>
+            );
+          })}
+
+          {/* Tombol Bahasa ID | EN */}
+          <div className="flex items-center gap-1.5 text-xs font-black tracking-widest pl-6 border-l border-white/20">
+            <button
+              onClick={() => setLang("ID")}
+              className={
+                lang === "ID"
+                  ? "text-amber-400"
+                  : "text-white/40 hover:text-white"
+              }
+            >
+              ID
+            </button>
+            <span className="text-white/30">|</span>
+            <button
+              onClick={() => setLang("EN")}
+              className={
+                lang === "EN"
+                  ? "text-amber-400"
+                  : "text-white/40 hover:text-white"
+              }
+            >
+              EN
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* 3. Konten Utama (Diberi jarak vertikal py-6 agar lebih lapang) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-10">
+        {/* Banner Slider Utama */}
+        <section className="relative overflow-hidden rounded-3xl min-h-[520px] sm:min-h-[620px] flex items-center shadow-xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentMain}
@@ -168,9 +240,10 @@ export default function HomePage() {
                 alt="Main Banner"
                 className="absolute inset-0 w-full h-full object-cover object-center scale-105"
               />
+              <div className="absolute inset-0 bg-black/40" />
 
               <div
-                className={`relative z-10 max-w-2xl w-full flex flex-col justify-start h-full space-y-1 pt-2 ${
+                className={`relative z-10 max-w-2xl w-full flex flex-col justify-start h-full space-y-2 pt-2 ${
                   mainSlides[currentMain].align === "right"
                     ? "ml-auto text-right"
                     : "mr-auto text-left"
@@ -192,7 +265,7 @@ export default function HomePage() {
                 (prev) => (prev - 1 + mainSlides.length) % mainSlides.length,
               )
             }
-            className="absolute left-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition"
+            className="absolute left-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
           >
             ❮
           </button>
@@ -200,7 +273,7 @@ export default function HomePage() {
             onClick={() =>
               setCurrentMain((prev) => (prev + 1) % mainSlides.length)
             }
-            className="absolute right-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition"
+            className="absolute right-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
           >
             ❯
           </button>
@@ -210,9 +283,9 @@ export default function HomePage() {
               <button
                 key={idx}
                 onClick={() => setCurrentMain(idx)}
-                className={`h-2.5 rounded-full transition-all duration-300 ${
+                className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                   currentMain === idx
-                    ? "w-10 bg-neutral-500"
+                    ? "w-10 bg-amber-400"
                     : "w-2.5 bg-white/50"
                 }`}
               />
@@ -220,7 +293,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-3xl min-h-[280px] sm:min-h-[320px] flex items-center">
+        {/* Banner Promo Slider */}
+        <section className="relative overflow-hidden rounded-3xl min-h-[280px] sm:min-h-[320px] flex items-center shadow-xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentPromo}
@@ -231,19 +305,19 @@ export default function HomePage() {
               className={`absolute inset-0 bg-gradient-to-r ${promoSlides[currentPromo].bgGradient} p-8 sm:p-12 flex items-center justify-between`}
             >
               <div className="space-y-3 z-10 max-w-lg">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-[#E5E5E5] bg-[#333333] px-3 py-1 rounded-full border border-white/10">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-black bg-amber-400 px-3 py-1 rounded-full border border-white/10">
                   {promoSlides[currentPromo].badge}
                 </span>
                 <h2 className="text-xl sm:text-3xl font-black text-[#F4F1DE] tracking-tight">
                   {promoSlides[currentPromo].title}{" "}
-                  <span className="text-[#D4D4D4] block sm:inline mt-1 sm:mt-0">
+                  <span className="text-amber-400 block sm:inline mt-1 sm:mt-0">
                     {promoSlides[currentPromo].discount}
                   </span>
                 </h2>
                 <div className="pt-2">
                   <Link
                     href="/booking"
-                    className="bg-[#E5E5E5] hover:bg-[#CCCCCC] text-black font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition inline-block shadow-md"
+                    className="bg-amber-400 hover:bg-amber-500 text-black font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition inline-block shadow-md"
                   >
                     {promoSlides[currentPromo].buttonText} →
                   </Link>
@@ -266,7 +340,7 @@ export default function HomePage() {
                 (prev) => (prev - 1 + promoSlides.length) % promoSlides.length,
               )
             }
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white text-xs flex items-center justify-center hover:bg-neutral-700 transition"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white text-xs flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
           >
             ❮
           </button>
@@ -274,7 +348,7 @@ export default function HomePage() {
             onClick={() =>
               setCurrentPromo((prev) => (prev + 1) % promoSlides.length)
             }
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white text-xs flex items-center justify-center hover:bg-neutral-700 transition"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-black/60 border border-white/20 text-white text-xs flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
           >
             ❯
           </button>
@@ -284,8 +358,8 @@ export default function HomePage() {
               <button
                 key={idx}
                 onClick={() => setCurrentPromo(idx)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  currentPromo === idx ? "w-8 bg-[#E5E5E5]" : "w-2 bg-white/30"
+                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentPromo === idx ? "w-8 bg-amber-400" : "w-2 bg-white/30"
                 }`}
               />
             ))}
