@@ -24,14 +24,14 @@ export default function HomePage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navMenus = [
-    "Beranda",
-    "Produk",
-    "Promosi",
-    "Lokasi",
-    "Ulasan",
-    "Riwayat Servis",
-    "Tips Servis Mobil",
-    "Mengenal Auto Craft",
+    { name: "Beranda", path: "/home" },
+    { name: "Produk", path: "#" },
+    { name: "Promosi", path: "/promosi" },
+    { name: "Lokasi", path: "/lokasi" },
+    { name: "Ulasan", path: "/ulasan" },
+    { name: "Riwayat Servis", path: "/riwayat" },
+    { name: "Tips Servis Mobil", path: "/tips" },
+    { name: "Mengenal Auto Craft", path: "/about" },
   ];
 
   const productCategories = [
@@ -118,7 +118,6 @@ export default function HomePage() {
   const [currentMain, setCurrentMain] = useState(0);
   const [currentPromo, setCurrentPromo] = useState(0);
 
-  // Perbaikan tipe data Event agar tidak error merah di TypeScript
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -205,35 +204,49 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-6 sm:gap-8 text-xs font-bold uppercase tracking-wider whitespace-nowrap relative overflow-x-auto scrollbar-none">
           {navMenus.map((menu) => {
             const hasDropdown =
-              menu === "Produk" ||
-              menu === "Tips Servis Mobil" ||
-              menu === "Mengenal Auto Craft";
+              menu.name === "Produk" ||
+              menu.name === "Tips Servis Mobil" ||
+              menu.name === "Mengenal Auto Craft";
+
             return (
-              <div key={menu} className="relative">
-                <button
-                  onClick={() => {
-                    setActiveTab(menu);
-                    if (menu === "Produk") {
-                      setIsProductDropdownOpen(!isProductDropdownOpen);
-                    } else {
-                      setIsProductDropdownOpen(false);
-                    }
-                  }}
-                  className={`transition pb-1 flex items-center gap-1.5 cursor-pointer ${
-                    activeTab === menu
-                      ? "text-amber-400 border-b-2 border-amber-400"
-                      : "text-white/80 hover:text-white"
-                  }`}
-                >
-                  {menu}{" "}
-                  {hasDropdown && (
-                    <span
-                      className={`text-[10px] transition-transform ${menu === "Produk" && isProductDropdownOpen ? "rotate-180" : ""}`}
-                    >
-                      ▼
-                    </span>
-                  )}
-                </button>
+              <div key={menu.name} className="relative">
+                {menu.name === "Promosi" ? (
+                  <Link
+                    href={menu.path}
+                    className={`transition pb-1 flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === menu.name
+                        ? "text-amber-400 border-b-2 border-amber-400"
+                        : "text-white/80 hover:text-white"
+                    }`}
+                  >
+                    {menu.name}
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveTab(menu.name);
+                      if (menu.name === "Produk") {
+                        setIsProductDropdownOpen(!isProductDropdownOpen);
+                      } else {
+                        setIsProductDropdownOpen(false);
+                      }
+                    }}
+                    className={`transition pb-1 flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === menu.name
+                        ? "text-amber-400 border-b-2 border-amber-400"
+                        : "text-white/80 hover:text-white"
+                    }`}
+                  >
+                    {menu.name}{" "}
+                    {hasDropdown && (
+                      <span
+                        className={`text-[10px] transition-transform ${menu.name === "Produk" && isProductDropdownOpen ? "rotate-180" : ""}`}
+                      >
+                        ▼
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}
