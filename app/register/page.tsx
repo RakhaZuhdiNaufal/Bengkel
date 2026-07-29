@@ -2,23 +2,47 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function RegisterPage() {
+  const router = useRouter();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      // Redirect ke login agar user bisa masuk
+      router.push("/login");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex font-sans">
       {/* Sisi Kiri: Panel Dekoratif Lebih Kecil/Proporsional */}
       <div className="hidden lg:flex lg:w-[42%] bg-[#E07A5F] relative overflow-hidden items-center justify-center p-10">
         <div className="relative z-10 max-w-md space-y-5 text-black">
-          <span className="bg-black/10 text-black px-3.5 py-1.5 rounded-full text-[11px] font-extrabold uppercase tracking-widest border border-black/10">
-            AUTO CRAFT STUDIO
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-none text-white drop-shadow-sm">
-            Decide faster so you can do more
-          </h1>
-          <p className="text-xs sm:text-sm font-medium text-white/90 leading-relaxed">
-            Bergabunglah sekarang untuk mendapatkan akses penuh ke layanan
-            servis terbaik dan performa kendaraan maksimal.
-          </p>
         </div>
 
         <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none" />
@@ -48,13 +72,20 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
+            {errorMsg && (
+              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-xs font-semibold">
+                {errorMsg}
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-white/80 mb-1.5">
                 Nama Lengkap
               </label>
               <input
                 type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 placeholder="John Doe"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
@@ -67,6 +98,8 @@ export default function RegisterPage() {
               </label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@email.com"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
@@ -79,17 +112,21 @@ export default function RegisterPage() {
               </label>
               <input
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimal 8 karakter"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
+                minLength={8}
               />
             </div>
 
             <button
               type="submit"
-              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer"
+              disabled={loading}
+              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] disabled:bg-[#E07A5F]/50 disabled:cursor-not-allowed text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer flex justify-center items-center"
             >
-              Daftar
+              {loading ? "Memproses..." : "Daftar"}
             </button>
           </form>
 

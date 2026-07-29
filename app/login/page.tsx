@@ -2,8 +2,36 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      // Jika berhasil login, redirect ke /home
+      router.push("/home");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex font-sans">
       {/* Sisi Kiri: Panel Dekoratif Lebih Kecil/Proporsional */}
@@ -37,13 +65,20 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
+            {errorMsg && (
+              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-400 text-xs font-semibold">
+                {errorMsg}
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-white/80 mb-1.5">
-                Email / Username
+                Alamat Email
               </label>
               <input
-                type="text"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="nama@email.com"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
@@ -55,15 +90,17 @@ export default function LoginPage() {
                 <label className="block text-xs font-semibold text-white/80">
                   Kata Sandi
                 </label>
-                <a
+                <Link
                   href="#"
                   className="text-[11px] text-[#E07A5F] hover:underline font-medium"
                 >
                   Lupa sandi?
-                </a>
+                </Link>
               </div>
               <input
                 type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
@@ -72,9 +109,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer"
+              disabled={loading}
+              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] disabled:bg-[#E07A5F]/50 disabled:cursor-not-allowed text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer flex justify-center items-center"
             >
-              Masuk
+              {loading ? "Memproses..." : "Masuk"}
             </button>
           </form>
 
