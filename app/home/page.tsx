@@ -3,6 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import QuickBooking from "@/components/QuickBooking";
+import WhyChooseUs from "@/components/WhyChooseUs";
+import PopularServices from "@/components/PopularServices";
+import PromoSlider from "@/components/PromoSlider";
+import CostEstimator from "@/components/CostEstimator";
+import TestimonialCarousel from "@/components/TestimonialCarousel";
+import ArticleGrid from "@/components/ArticleGrid";
+import FAQAccordion from "@/components/FAQAccordion";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
 import {
   Disc,
   Droplet,
@@ -375,7 +385,21 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+        
+        {/* Fitur Baru */}
+        <QuickBooking />
+        <WhyChooseUs />
+        <PopularServices />
+        <PromoSlider />
+        <CostEstimator />
+        <TestimonialCarousel />
+        <ArticleGrid />
+        <FAQAccordion />
+        <CTA />
+
       </main>
+
+      <Footer />
     </div>
   );
 }
