@@ -5,6 +5,12 @@ import { motion, Variants } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import IndonesiaMapSection from "@/components/IndonesiaMapSection";
+import WhyChooseUs from "@/components/WhyChooseUs";
+import TestimonialCarousel from "@/components/TestimonialCarousel";
+import ArticleGrid from "@/components/ArticleGrid";
+import FAQAccordion from "@/components/FAQAccordion";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
 
 export default function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -418,130 +424,25 @@ export default function Home() {
         </section>
 
         {/* KEUNGGULAN KAMI */}
-        <section className="py-24 border-t border-white/10 relative overflow-hidden bg-[#121212]">
-          <div className="max-w-[1100px] mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false }}
-              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-              className="text-center mb-20 space-y-3"
-            >
-              <p className="text-[#E07A5F] text-xs sm:text-sm font-bold tracking-widest uppercase">
-                Keunggulan Layanan
-              </p>
-              <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-                Keunggulan Kami
-              </h2>
-            </motion.div>
+        <WhyChooseUs />
 
-            <div className="relative">
-              <div className="hidden md:block absolute left-1/2 top-6 bottom-6 -translate-x-1/2 w-10 pointer-events-none z-0">
-                <svg
-                  className="w-full h-full"
-                  viewBox="0 0 40 1000"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M 20,0 
-                       C 32,100 32,100 20,200 
-                       C 8,300 8,300 20,400 
-                       C 32,500 32,500 20,600 
-                       C 8,700 8,700 20,800 
-                       C 32,900 32,900 20,1000"
-                    fill="none"
-                    stroke="#E07A5F"
-                    strokeWidth="2.5"
-                    strokeDasharray="6 6"
-                    className="opacity-75"
-                  />
-                </svg>
-              </div>
-
-              <div className="md:hidden absolute left-5 -translate-x-1/2 top-5 bottom-5 w-10 pointer-events-none z-0">
-                <svg
-                  className="w-full h-full"
-                  viewBox="0 0 40 1000"
-                  preserveAspectRatio="none"
-                >
-                  <path
-                    d="M 20,0 
-                       C 32,100 32,100 20,200 
-                       C 8,300 8,300 20,400 
-                       C 32,500 32,500 20,600 
-                       C 8,700 8,700 20,800 
-                       C 32,900 32,900 20,1000"
-                    fill="none"
-                    stroke="#E07A5F"
-                    strokeWidth="2"
-                    strokeDasharray="5 5"
-                    className="opacity-75"
-                  />
-                </svg>
-              </div>
-
-              <div className="space-y-12 md:space-y-20 relative z-10">
-                {features.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 40 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: false, margin: "-50px" }}
-                    transition={{
-                      duration: 0.6,
-                      delay: index * 0.08,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                    className="relative flex flex-col md:flex-row items-start md:items-center group"
-                  >
-                    <div className="w-full md:w-1/2 pl-14 md:pl-0 md:pr-12 md:text-right order-2 md:order-1">
-                      {item.side === "left" && (
-                        <div className="p-6 rounded-2xl bg-[#1A1A1A] border border-white/10 group-hover:border-[#E07A5F] transition-all duration-300 shadow-xl backdrop-blur-sm">
-                          <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight group-hover:text-[#E07A5F] transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-white/70 text-xs sm:text-sm leading-relaxed font-normal">
-                            {item.desc}
-                          </p>
-                        </div>
-                      )}
-                      {item.side === "right" && (
-                        <div className="md:hidden p-6 rounded-2xl bg-[#1A1A1A] border border-white/10 group-hover:border-[#E07A5F] transition-all duration-300 shadow-xl backdrop-blur-sm">
-                          <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight group-hover:text-[#E07A5F] transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-white/70 text-xs sm:text-sm leading-relaxed font-normal">
-                            {item.desc}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="absolute left-0 md:relative md:left-auto flex items-center justify-center shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#121212] border-2 border-[#E07A5F] text-[#E07A5F] font-black text-sm sm:text-base shadow-[0_0_15px_rgba(224,122,95,0.45)] group-hover:bg-[#E07A5F] group-hover:text-white group-hover:scale-110 transition-all duration-300 z-10 my-auto order-1 md:order-2">
-                      {item.num}
-                    </div>
-
-                    <div className="w-full md:w-1/2 pl-14 md:pl-12 order-3">
-                      {item.side === "right" && (
-                        <div className="hidden md:block p-6 rounded-2xl bg-[#1A1A1A] border border-white/10 group-hover:border-[#E07A5F] transition-all duration-300 shadow-xl backdrop-blur-sm">
-                          <h3 className="text-lg sm:text-xl font-bold text-white mb-2 tracking-tight group-hover:text-[#E07A5F] transition-colors">
-                            {item.title}
-                          </h3>
-                          <p className="text-white/70 text-xs sm:text-sm leading-relaxed font-normal">
-                            {item.desc}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* MAP SECTION */}
+        {/* PETA JARINGAN CABANG */}
         <IndonesiaMapSection />
+
+        {/* ULASAN PELANGGAN */}
+        <TestimonialCarousel />
+
+        {/* BLOG & TIPS */}
+        <ArticleGrid />
+
+        {/* FAQ ACCORDION */}
+        <FAQAccordion />
+
+        {/* CALL TO ACTION */}
+        <CTA />
+
+        {/* FOOTER */}
+        <Footer />
       </div>
     </div>
   );

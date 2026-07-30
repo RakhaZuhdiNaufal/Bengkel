@@ -91,7 +91,7 @@ export default function LoginPage() {
                   Kata Sandi
                 </label>
                 <Link
-                  href="#"
+                  href="/lupa-password"
                   className="text-[11px] text-[#E07A5F] hover:underline font-medium"
                 >
                   Lupa sandi?

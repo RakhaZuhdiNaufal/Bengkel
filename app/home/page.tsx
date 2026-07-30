@@ -1,16 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import Link from "next/link";
 import QuickBooking from "@/components/QuickBooking";
-import WhyChooseUs from "@/components/WhyChooseUs";
 import PopularServices from "@/components/PopularServices";
 import PromoSlider from "@/components/PromoSlider";
 import CostEstimator from "@/components/CostEstimator";
-import TestimonialCarousel from "@/components/TestimonialCarousel";
-import ArticleGrid from "@/components/ArticleGrid";
-import FAQAccordion from "@/components/FAQAccordion";
 import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
 import {
@@ -385,16 +381,35 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
+        {/* Banner Reminder & Empty State (Customer Dashboard) */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#121212] border border-white/10 rounded-3xl p-6 flex items-center gap-4 hover:border-white/30 transition shadow-lg">
+            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20 flex-shrink-0">
+              <ShieldAlert className="w-6 h-6 text-red-500" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold mb-1">Jadwal Servis Terlewat!</h3>
+              <p className="text-sm text-white/50">Porsche 911 GT3 RS Anda sudah melewati batas waktu servis rutin bulanan.</p>
+              <Link href="/booking" className="inline-block mt-3 text-xs font-bold text-[#E07A5F] hover:text-white transition uppercase tracking-wider">Jadwalkan Sekarang →</Link>
+            </div>
+          </div>
+          
+          <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 flex flex-col justify-center text-center hover:border-white/30 transition shadow-lg relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#E07A5F]/5 rounded-full blur-2xl pointer-events-none" />
+            <h3 className="text-white font-bold mb-2">Ingin memantau kendaraan?</h3>
+            <p className="text-sm text-white/50 mb-4">Tambahkan data kendaraan Anda untuk mendapatkan pengingat servis otomatis.</p>
+            <Link href="/akun" className="text-xs font-bold bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl border border-white/10 transition mx-auto flex items-center gap-2">
+              <span className="text-[#E07A5F] text-lg">+</span> Tambah Garasi
+            </Link>
+          </div>
+        </section>
         
-        {/* Fitur Baru */}
+        {/* Fitur Utama Dashboard */}
         <QuickBooking />
-        <WhyChooseUs />
         <PopularServices />
         <PromoSlider />
         <CostEstimator />
-        <TestimonialCarousel />
-        <ArticleGrid />
-        <FAQAccordion />
         <CTA />
 
       </main>

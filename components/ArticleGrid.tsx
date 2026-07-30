@@ -1,3 +1,5 @@
+"use client";
+
 import { articles } from "@/data/dummy";
 import { ArrowRight } from "lucide-react";
 

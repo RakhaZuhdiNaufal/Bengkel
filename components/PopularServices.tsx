@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { services } from "@/data/dummy";
 import { Star, Clock } from "lucide-react";

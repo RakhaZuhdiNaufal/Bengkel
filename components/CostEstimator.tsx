@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { vehicles, branches, services } from "@/data/dummy";
 import { Calculator } from "lucide-react";

@@ -209,3 +209,60 @@ export const faqs = [
     answer: "Kami menerima Cash, Transfer Bank, Kartu Kredit (Visa/Mastercard), serta pembayaran digital melalui QRIS untuk kenyamanan transaksi Anda."
   }
 ];
+
+export const products = [
+  {
+    id: "p1",
+    name: "Michelin Pilot Sport 4S (245/35 R20)",
+    category: "Ban",
+    price: 4500000,
+    rating: 5.0,
+    reviews: 142,
+    image: "https://images.unsplash.com/photo-1622340356501-8b9a2c262e3d?q=80&w=800&auto=format&fit=crop"
+  },
+  {
+    id: "p2",
+    name: "Motul 300V Power 5W-40 2L",
+    category: "Oli",
+    price: 850000,
+    rating: 4.9,
+    reviews: 320,
+    image: "https://images.unsplash.com/photo-1635784384591-10c0349b1076?q=80&w=800&auto=format&fit=crop"
+  },
+  {
+    id: "p3",
+    name: "Brembo GT Big Brake Kit 6-Piston",
+    category: "Rem",
+    price: 45000000,
+    rating: 5.0,
+    reviews: 28,
+    image: "https://images.unsplash.com/photo-1598147743516-ebcd892782e4?q=80&w=800&auto=format&fit=crop"
+  },
+  {
+    id: "p4",
+    name: "Amsoil Signature Series 0W-20",
+    category: "Oli",
+    price: 350000,
+    rating: 4.8,
+    reviews: 185,
+    image: "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=800&auto=format&fit=crop"
+  },
+  {
+    id: "p5",
+    name: "Amaron Pro DIN65 (Aki Kering)",
+    category: "Aki",
+    price: 1850000,
+    rating: 4.7,
+    reviews: 95,
+    image: "https://images.unsplash.com/photo-1625047509248-ec889cbff17f?q=80&w=800&auto=format&fit=crop"
+  },
+  {
+    id: "p6",
+    name: "Ohlins Road & Track Coilover",
+    category: "Shock",
+    price: 35000000,
+    rating: 5.0,
+    reviews: 42,
+    image: "https://images.unsplash.com/photo-1607860108855-64b2078675c1?q=80&w=800&auto=format&fit=crop"
+  }
+];

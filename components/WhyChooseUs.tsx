@@ -1,3 +1,5 @@
+"use client";
+
 import { motion } from "framer-motion";
 import { ShieldCheck, Award, Wrench, CircleDollarSign, CalendarCheck, HeadphonesIcon } from "lucide-react";
 
@@ -72,7 +74,7 @@ export default function WhyChooseUs() {
           <motion.div
             key={idx}
             variants={itemVariants}
-            className="group p-8 rounded-3xl bg-[#121212] border border-white/5 hover:border-[#E07A5F]/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(251,191,36,0.1)] flex flex-col items-start"
+            className="group p-8 rounded-3xl bg-[#121212] border border-white/5 hover:border-[#E07A5F]/50 transition-all duration-300 hover:shadow-[0_0_30px_rgba(224,122,95,0.1)] flex flex-col items-start"
           >
             <div className="w-14 h-14 rounded-2xl bg-[#1A1A1A] border border-white/10 text-[#E07A5F] flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-[#E07A5F] group-hover:text-black transition-all duration-300">
               {item.icon}
