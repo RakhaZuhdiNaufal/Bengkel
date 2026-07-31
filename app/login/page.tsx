@@ -4,10 +4,11 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,10 +27,30 @@ export default function LoginPage() {
     if (error) {
       setErrorMsg(error.message);
       setLoading(false);
-    } else {
-      // Jika berhasil login, redirect ke /home
-      router.push("/home");
+      return;
     }
+
+    const userId = data.user?.id;
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profile?.role === "admin" || profile?.role === "kasir") {
+        router.push("/admin");
+      } else {
+        const redirect =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("redirect")
+            : null;
+        router.push(redirect || "/profile");
+      }
+    } else {
+      router.push("/profile");
+    }
+    setLoading(false);
   };
 
   return (
@@ -62,6 +83,46 @@ export default function LoginPage() {
             </h2>
             <p className="text-xs text-white/60">
               Masukkan kredensial Anda untuk mengakses akun.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[#121212] p-4 space-y-3">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-white/40">
+              Akun staff (tanpa register)
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@autocraft.com");
+                  setPassword("Admin123!");
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left transition hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/10"
+              >
+                <span className="block text-xs font-bold text-white">Admin</span>
+                <span className="block text-[11px] text-white/45 truncate">
+                  admin@autocraft.com
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("kasir@autocraft.com");
+                  setPassword("Kasir123!");
+                }}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-left transition hover:border-[#E07A5F]/50 hover:bg-[#E07A5F]/10"
+              >
+                <span className="block text-xs font-bold text-white">Kasir</span>
+                <span className="block text-[11px] text-white/45 truncate">
+                  kasir@autocraft.com
+                </span>
+              </button>
+            </div>
+            <p className="text-[10px] text-white/35 leading-relaxed">
+              Password: <span className="text-white/60">Admin123!</span> /{" "}
+              <span className="text-white/60">Kasir123!</span> — buat user di
+              Supabase Auth (Auto Confirm), lalu jalankan{" "}
+              <code className="text-white/50">supabase/seed_admin.sql</code>
             </p>
           </div>
 
@@ -117,13 +178,16 @@ export default function LoginPage() {
           </form>
 
           <div className="text-center text-xs text-white/60 pt-2">
-            Belum memiliki akun?{" "}
+            Customer baru?{" "}
             <Link
               href="/register"
               className="text-[#E07A5F] font-semibold hover:underline"
             >
-              Daftar Sekarang
+              Daftar di sini
             </Link>
+            <span className="block mt-1 text-white/35">
+              Admin/Kasir tidak perlu register — langsung login.
+            </span>
           </div>
         </motion.div>
       </div>

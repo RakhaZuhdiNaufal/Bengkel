@@ -4,13 +4,15 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -19,12 +21,13 @@ export default function RegisterPage() {
     setLoading(true);
     setErrorMsg("");
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
+          nomor_hp: phone,
         },
       },
     });
@@ -33,7 +36,6 @@ export default function RegisterPage() {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
-      // Redirect ke login agar user bisa masuk
       router.push("/login");
     }
   };
@@ -103,6 +105,19 @@ export default function RegisterPage() {
                 placeholder="nama@email.com"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                Nomor HP
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="08xxxxxxxxxx"
+                className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
               />
             </div>
 
