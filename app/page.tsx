@@ -11,8 +11,10 @@ import ArticleGrid from "@/components/ArticleGrid";
 import FAQAccordion from "@/components/FAQAccordion";
 import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function Home() {
+  const { user, isStaff } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -240,13 +242,13 @@ export default function Home() {
               </nav>
             </div>
 
-            {/* TOMBOL MASUK DENGAN ROUTING KE /login */}
+            {/* TOMBOL MASUK / AKUN DENGAN ROUTING DINAMIS */}
             <div className="flex items-center gap-4">
               <Link
-                href="/login"
+                href={user ? (isStaff ? "/admin" : "/akun") : "/login"}
                 className="bg-[#E07A5F] hover:bg-[#d0694e] text-white text-sm font-bold px-7 py-2 rounded-full transition-all transform active:scale-95 shadow-lg shadow-[#E07A5F]/20 flex items-center justify-center"
               >
-                Masuk
+                {user ? (isStaff ? "Admin Panel" : "Akun Saya") : "Masuk"}
               </Link>
             </div>
           </div>

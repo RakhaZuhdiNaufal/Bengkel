@@ -44,7 +44,6 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/register") ||
     path.startsWith("/lupa-password");
   const isProtected =
-    path.startsWith("/profile") ||
     path.startsWith("/settings") ||
     path.startsWith("/admin") ||
     path.startsWith("/akun");
@@ -67,7 +66,7 @@ export async function updateSession(request: NextRequest) {
     redirectUrl.pathname =
       profile?.role === "admin" || profile?.role === "kasir"
         ? "/admin"
-        : "/profile";
+        : "/akun";
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -80,7 +79,7 @@ export async function updateSession(request: NextRequest) {
 
     if (profile?.role !== "admin" && profile?.role !== "kasir") {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/profile";
+      redirectUrl.pathname = "/akun";
       return NextResponse.redirect(redirectUrl);
     }
   }

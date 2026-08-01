@@ -45,10 +45,10 @@ export default function LoginPage() {
           typeof window !== "undefined"
             ? new URLSearchParams(window.location.search).get("redirect")
             : null;
-        router.push(redirect || "/profile");
+        router.push(redirect || "/akun");
       }
     } else {
-      router.push("/profile");
+      router.push("/akun");
     }
     setLoading(false);
   };

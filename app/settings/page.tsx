@@ -167,7 +167,7 @@ export default function SettingsPage() {
     <div className="min-h-screen pb-20">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#121212]/90 px-4 py-4 backdrop-blur-md sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <Link href="/profile" className="text-sm font-semibold text-white/70 hover:text-white">
+          <Link href="/akun" className="text-sm font-semibold text-white/70 hover:text-white">
             ← Kembali ke Profile
           </Link>
           <span className="text-sm font-bold text-white">Settings</span>

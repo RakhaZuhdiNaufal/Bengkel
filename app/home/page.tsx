@@ -9,6 +9,7 @@ import PromoSlider from "@/components/PromoSlider";
 import CostEstimator from "@/components/CostEstimator";
 import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   Disc,
   Droplet,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState("Beranda");
   const [searchQuery, setSearchQuery] = useState("");
   const [lang, setLang] = useState("ID");
@@ -193,11 +195,22 @@ export default function HomePage() {
               Booking Sekarang
             </Link>
 
-            <div className="flex items-center gap-2 border-l border-white/10 pl-3">
-              <div className="w-9 h-9 rounded-full bg-neutral-700 text-white text-xs font-extrabold flex items-center justify-center">
-                AD
+            <Link
+              href="/akun"
+              title="Ke Profile Saya"
+              className="flex items-center gap-2 border-l border-white/10 pl-3 group cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-full bg-neutral-700 group-hover:bg-[#E07A5F] text-white text-xs font-extrabold flex items-center justify-center ring-2 ring-transparent group-hover:ring-[#E07A5F]/50 transition-all transform group-active:scale-95 shadow-md">
+                {profile?.nama
+                  ? profile.nama
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .substring(0, 2)
+                      .toUpperCase()
+                  : "AD"}
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </header>
@@ -382,6 +395,9 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Fitur Utama Dashboard */}
+        <QuickBooking />
+
         {/* Banner Reminder & Empty State (Customer Dashboard) */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-gradient-to-r from-[#1A1A1A] to-[#121212] border border-white/10 rounded-3xl p-6 flex items-center gap-4 hover:border-white/30 transition shadow-lg">
@@ -404,9 +420,7 @@ export default function HomePage() {
             </Link>
           </div>
         </section>
-        
-        {/* Fitur Utama Dashboard */}
-        <QuickBooking />
+
         <PopularServices />
         <PromoSlider />
         <CostEstimator />
