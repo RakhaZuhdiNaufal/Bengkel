@@ -1,13 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function AdminLogin() {
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,22 +29,7 @@ export default function LoginPage() {
 
     const userId = data.user?.id;
     if (userId) {
-      // Cek apakah pengguna adalah admin/kasir
-      const { data: profile } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", userId)
-        .single();
-
-      if (profile?.role === "admin" || profile?.role === "kasir") {
-        // Keluarkan langsung dari sesi klien agar tidak nyangkut
-        await supabase.auth.signOut();
-        setErrorMsg("Akun tidak ditemukan");
-        setLoading(false);
-        return;
-      }
-
-      window.location.href = "/home";
+      window.location.href = "/";
     } else {
       setErrorMsg("Gagal memuat profil akun.");
     }
@@ -73,17 +55,14 @@ export default function LoginPage() {
           className="w-full max-w-md space-y-6"
         >
           <div className="space-y-2">
-            <Link
-              href="/"
-              className="inline-block text-[#F4F1DE] font-black text-2xl tracking-tighter hover:text-[#E07A5F] transition"
-            >
+            <div className="inline-block text-[#F4F1DE] font-black text-2xl tracking-tighter">
               AUTO CRAFT
-            </Link>
+            </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Selamat Datang Kembali
+              Admin Panel
             </h2>
             <p className="text-xs text-white/60">
-              Masukkan kredensial Anda untuk mengakses akun.
+              Masukkan kredensial khusus staf untuk masuk ke dashboard.
             </p>
           </div>
 
@@ -101,24 +80,16 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@email.com"
+                placeholder="admin@autocraft.com"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
               />
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-white/80">
-                  Kata Sandi
-                </label>
-                <Link
-                  href="/lupa-password"
-                  className="text-[11px] text-[#E07A5F] hover:underline font-medium"
-                >
-                  Lupa sandi?
-                </Link>
-              </div>
+              <label className="block text-xs font-semibold text-white/80 mb-1.5">
+                Kata Sandi
+              </label>
               <input
                 type="password"
                 value={password}
@@ -134,21 +105,9 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full bg-[#E07A5F] hover:bg-[#d0694e] disabled:bg-[#E07A5F]/50 disabled:cursor-not-allowed text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer flex justify-center items-center"
             >
-              {loading ? "Memproses..." : "Masuk"}
+              {loading ? "Memproses..." : "Masuk ke Panel Admin"}
             </button>
           </form>
-
-          <div className="text-center text-xs text-white/60 pt-2 space-y-1">
-            <div>
-              Customer baru?{" "}
-              <Link
-                href="/register"
-                className="text-[#E07A5F] font-semibold hover:underline"
-              >
-                Daftar di sini
-              </Link>
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>

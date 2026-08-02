@@ -51,7 +51,7 @@ const emptyVehicle = {
 
 export default function AkunPage() {
   const router = useRouter();
-  const { user, profile, loading, signOut, isStaff } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const supabase = useMemo(() => createClient(), []);
 
   const [tab, setTab] = useState<Tab>("profil");
@@ -84,8 +84,7 @@ export default function AkunPage() {
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?redirect=/akun");
-    if (!loading && isStaff) router.replace("/admin");
-  }, [loading, user, isStaff, router]);
+  }, [loading, user, router]);
 
   useEffect(() => {
     if (profile) setPhone(profile.nomor_hp ?? "");

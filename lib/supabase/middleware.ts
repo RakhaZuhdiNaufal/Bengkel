@@ -15,73 +15,50 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
-  let supabaseResponse = NextResponse.next({ request });
-
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
+  let supabaseResponse = NextResponse.next({
+    request,
   });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage =
-    path.startsWith("/login") ||
-    path.startsWith("/register") ||
-    path.startsWith("/lupa-password");
-  const isProtected =
-    path.startsWith("/settings") ||
-    path.startsWith("/admin") ||
-    path.startsWith("/akun");
-
-  if (!user && isProtected) {
+  const isAuthPage = path === "/login" || path === "/register" || path === "/lupa-password";
+  
+  // Jika user belum login, tapi mencoba akses halaman terlindungi
+  if (!user && (path === "/akun" || path === "/profile")) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("redirect", path);
     return NextResponse.redirect(redirectUrl);
   }
 
+  // Jika user sudah login dan mengakses halaman auth (/login, /register)
   if (user && isAuthPage) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname =
-      profile?.role === "admin" || profile?.role === "kasir"
-        ? "/admin"
-        : "/akun";
+    redirectUrl.pathname = "/home";
     return NextResponse.redirect(redirectUrl);
-  }
-
-  if (user && path.startsWith("/admin")) {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.role !== "admin" && profile?.role !== "kasir") {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/akun";
-      return NextResponse.redirect(redirectUrl);
-    }
   }
 
   return supabaseResponse;

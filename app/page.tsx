@@ -14,7 +14,7 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function Home() {
-  const { user, isStaff } = useAuth();
+  const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -245,10 +245,10 @@ export default function Home() {
             {/* TOMBOL MASUK / AKUN DENGAN ROUTING DINAMIS */}
             <div className="flex items-center gap-4">
               <Link
-                href={user ? (isStaff ? "/admin" : "/akun") : "/login"}
+                href={user ? "/akun" : "/login"}
                 className="bg-[#E07A5F] hover:bg-[#d0694e] text-white text-sm font-bold px-7 py-2 rounded-full transition-all transform active:scale-95 shadow-lg shadow-[#E07A5F]/20 flex items-center justify-center"
               >
-                {user ? (isStaff ? "Admin Panel" : "Akun Saya") : "Masuk"}
+                {user ? "Akun Saya" : "Masuk"}
               </Link>
             </div>
           </div>

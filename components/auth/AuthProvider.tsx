@@ -19,8 +19,6 @@ interface AuthContextValue {
   loading: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
-  isStaff: boolean;
-  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -68,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           // Coba simpan ke database public.users jika belum ada
           try {
-            await supabase.from("users").upsert(fallbackProfile);
+            await supabase.from("users").upsert(fallbackProfile, { onConflict: "id" });
           } catch (e) {
             console.error("Auto-insert user profile error:", e);
           }
