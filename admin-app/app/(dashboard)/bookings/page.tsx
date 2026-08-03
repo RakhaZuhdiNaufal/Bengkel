@@ -296,76 +296,111 @@ export default function BookingsPage() {
         </select>
       </div>
 
-      {/* Booking Grid / List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Booking List grouped by Date */}
+      <div className="space-y-12">
         {loading ? (
-          <div className="col-span-full py-12 text-center text-white/40">Memuat data pesanan...</div>
+          <div className="py-12 text-center text-white/40">Memuat data pesanan...</div>
         ) : filteredBookings.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-white/40">Tidak ada pesanan ditemukan.</div>
+          <div className="py-12 text-center text-white/40">Tidak ada pesanan ditemukan.</div>
         ) : (
-          filteredBookings.map((booking) => (
-            <motion.div 
-              key={booking.id}
-              layout
-              className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-all flex flex-col"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                    booking.status === 'diterima' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                    booking.status === 'ditolak' || booking.status === 'dibatalkan' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
-                    booking.status === 'menunggu' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
-                    'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  }`}>
-                    {booking.status}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <div className="text-[#E07A5F] font-bold text-sm">
-                    {dayjs(booking.tanggal).format("DD MMM YYYY")}
-                  </div>
-                  <div className="text-white/60 text-xs">
-                    Pukul {dayjs(booking.tanggal).format("HH:mm")}
-                  </div>
-                </div>
-              </div>
+          <>
+            {(() => {
+               const todayBookings = filteredBookings.filter(b => dayjs(b.tanggal).isSame(dayjs(), 'day'));
+               const upcomingBookings = filteredBookings.filter(b => dayjs(b.tanggal).isAfter(dayjs(), 'day'));
+               const pastBookings = filteredBookings.filter(b => dayjs(b.tanggal).isBefore(dayjs(), 'day'));
+               
+               const renderGrid = (bookings: any[]) => (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {bookings.map((booking) => (
+                    <motion.div 
+                      key={booking.id}
+                      layout
+                      className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-all flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            booking.status === 'diterima' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                            booking.status === 'ditolak' || booking.status === 'dibatalkan' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            booking.status === 'menunggu' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+                            'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {booking.status}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[#E07A5F] font-bold text-sm">
+                            {dayjs(booking.tanggal).format("DD MMM YYYY")}
+                          </div>
+                          <div className="text-white/60 text-xs">
+                            Pukul {dayjs(booking.tanggal).format("HH:mm")}
+                          </div>
+                        </div>
+                      </div>
 
-              <div className="space-y-4 flex-1">
-                <div>
-                  <h3 className="font-semibold text-lg text-white">{booking.users?.nama || "Pelanggan"}</h3>
-                  <p className="text-sm text-white/60">{booking.users?.nomor_hp || "-"}</p>
-                </div>
-                
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-xs text-white/40 mb-1">KENDARAAN</div>
-                  <div className="font-medium text-white">{booking.vehicles?.merk} {booking.vehicles?.tipe}</div>
-                  <div className="text-sm text-white/70 font-mono mt-0.5 uppercase">{booking.vehicles?.nomor_polisi}</div>
-                </div>
+                      <div className="space-y-4 flex-1">
+                        <div>
+                          <h3 className="font-semibold text-lg text-white">{booking.users?.nama || "Pelanggan"}</h3>
+                          <p className="text-sm text-white/60">{booking.users?.nomor_hp || "-"}</p>
+                        </div>
+                        
+                        <div className="bg-black/30 p-3 rounded-xl border border-white/5">
+                          <div className="text-xs text-white/40 mb-1">KENDARAAN</div>
+                          <div className="font-medium text-white">{booking.vehicles?.merk} {booking.vehicles?.tipe}</div>
+                          <div className="text-sm text-white/70 font-mono mt-0.5 uppercase">{booking.vehicles?.nomor_polisi}</div>
+                        </div>
 
-                <div>
-                  <div className="text-xs text-white/40 mb-1">KELUHAN / PERMINTAAN</div>
-                  <p className="text-sm text-white/80 line-clamp-2">{booking.keluhan || booking.jenis_servis || "-"}</p>
-                </div>
-              </div>
+                        <div>
+                          <div className="text-xs text-white/40 mb-1">KELUHAN / PERMINTAAN</div>
+                          <p className="text-sm text-white/80 line-clamp-2">{booking.keluhan || booking.jenis_servis || "-"}</p>
+                        </div>
+                      </div>
 
-              {booking.status === 'menunggu' && (
-                <div className="mt-6 flex gap-3 border-t border-white/10 pt-4">
-                  <button 
-                    onClick={() => openProcessModal(booking, 'ditolak')}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <XCircle className="w-4 h-4" /> Tolak
-                  </button>
-                  <button 
-                    onClick={() => openProcessModal(booking, 'diterima')}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" /> Terima
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          ))
+                      {booking.status === 'menunggu' && (
+                        <div className="mt-6 flex gap-3 border-t border-white/10 pt-4">
+                          <button 
+                            onClick={() => openProcessModal(booking, 'ditolak')}
+                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <XCircle className="w-4 h-4" /> Tolak
+                          </button>
+                          <button 
+                            onClick={() => openProcessModal(booking, 'diterima')}
+                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-green-400 bg-green-500/10 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <CheckCircle className="w-4 h-4" /> Terima
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                   ))}
+                 </div>
+               );
+               
+               return (
+                 <>
+                   {todayBookings.length > 0 && (
+                     <div className="space-y-4">
+                       <h2 className="text-xl font-bold text-white flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#E07A5F]"></div> Jadwal Hari Ini</h2>
+                       {renderGrid(todayBookings)}
+                     </div>
+                   )}
+                   {upcomingBookings.length > 0 && (
+                     <div className="space-y-4">
+                       <h2 className="text-xl font-bold text-white flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Jadwal Mendatang</h2>
+                       {renderGrid(upcomingBookings)}
+                     </div>
+                   )}
+                   {pastBookings.length > 0 && (
+                     <div className="space-y-4">
+                       <h2 className="text-xl font-bold text-white/60 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white/20"></div> Riwayat Terdahulu</h2>
+                       {renderGrid(pastBookings)}
+                     </div>
+                   )}
+                 </>
+               );
+            })()}
+          </>
         )}
       </div>
 

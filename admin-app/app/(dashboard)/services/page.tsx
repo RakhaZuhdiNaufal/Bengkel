@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wrench, Plus, Trash2, CheckCircle2, FileText, Search } from "lucide-react";
+import { Wrench, Plus, Trash2, CheckCircle2, FileText, Search, Calendar } from "lucide-react";
+import dayjs from "dayjs";
 
 type Service = {
   id: string;
@@ -18,6 +19,7 @@ type Service = {
   total: number;
   users: { nama: string; nomor_hp: string; nomor_pelanggan: string };
   vehicles: { merk: string; tipe: string; nomor_polisi: string };
+  bookings?: { tanggal: string };
 };
 
 export default function ServicesPage() {
@@ -55,9 +57,10 @@ export default function ServicesPage() {
       .select(`
         *,
         users (nama, nomor_hp, nomor_pelanggan),
-        vehicles (merk, tipe, nomor_polisi)
+        vehicles (merk, tipe, nomor_polisi),
+        bookings (tanggal)
       `)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true }); // Mengubah ke ASC untuk urutan antrean yang benar (FIFO)
 
     if (data) setServices(data as any);
     setLoading(false);
@@ -76,10 +79,21 @@ export default function ServicesPage() {
   });
 
   // LOGIKA ANTREAN (MAX 4 BAY)
-  // Hanya berlaku untuk status 'proses'
   const prosesServices = filteredServices.filter(s => s.status === "proses");
-  const activeBays = prosesServices.slice(0, 4);
-  const waitingQueue = prosesServices.slice(4);
+  
+  // Pisahkan berdasarkan tanggal
+  const todayAndPastServices = prosesServices.filter(s => {
+    if (!s.bookings?.tanggal) return true; // fallback jika tdk ada booking
+    return dayjs(s.bookings.tanggal).isBefore(dayjs().endOf('day'));
+  });
+  
+  const futureServices = prosesServices.filter(s => {
+    if (!s.bookings?.tanggal) return false;
+    return dayjs(s.bookings.tanggal).isAfter(dayjs().endOf('day'));
+  });
+
+  const activeBays = todayAndPastServices.slice(0, 4);
+  const waitingQueue = todayAndPastServices.slice(4);
   
   // Untuk status selain 'proses' (misal selesai/dibatalkan), tampilkan semua
   const otherServices = filteredServices.filter(s => s.status !== "proses");
@@ -358,6 +372,35 @@ export default function ServicesPage() {
                   </div>
                 )}
               </div>
+
+              {/* JADWAL MENDATANG (Future Services) */}
+              {futureServices.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4 mt-8">
+                    <h2 className="text-xl font-bold text-white/70">Jadwal Mendatang</h2>
+                    <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/30">
+                      {futureServices.length} Kendaraan
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {futureServices.map((service) => (
+                      <div key={service.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-60">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-white/50 text-xs mt-1">Jadwal: {dayjs(service.bookings?.tanggal).format("DD MMM YYYY, HH:mm")} | Pelanggan: {service.users?.nama}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-white/40 uppercase">Belum Waktunya</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 

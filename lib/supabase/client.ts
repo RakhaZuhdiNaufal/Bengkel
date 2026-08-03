@@ -12,5 +12,12 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(url, key);
+  return createBrowserClient(url, key, {
+    cookieOptions: {
+      name: 'user-auth-token'
+    },
+    auth: {
+      storageKey: 'user-auth-token'
+    }
+  });
 }

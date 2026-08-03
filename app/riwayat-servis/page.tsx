@@ -6,11 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Car, Wrench, Download, Calendar, MapPin, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import dayjs from "dayjs";
 
 export default function ServiceHistoryPage() {
   const router = useRouter();
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState("Menunggu");
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
   
   const [userProfile, setUserProfile] = useState<any>(null);
   const [myCars, setMyCars] = useState<any[]>([]);
@@ -53,11 +55,13 @@ export default function ServiceHistoryPage() {
 
       const { data: allProsesServices } = await supabase
         .from("services")
-        .select("id")
+        .select("id, bookings(tanggal)")
         .eq("status", "proses")
         .order("created_at", { ascending: true });
 
-      const prosesIds = allProsesServices ? allProsesServices.map(s => s.id) : [];
+      const activeQueueIds = (allProsesServices || [])
+        .filter((s: any) => !s.bookings?.tanggal || dayjs(s.bookings.tanggal).isBefore(dayjs().endOf('day')))
+        .map((s: any) => s.id);
 
       if (bookingsData) {
         const mapped = bookingsData.map((b: any) => {
@@ -71,17 +75,22 @@ export default function ServiceHistoryPage() {
               statusLabel = "Selesai";
               progress = 100;
             } else if (srv.status === 'proses') {
-              // Cari antrean
-              const index = prosesIds.indexOf(srv.id);
-              if (index !== -1 && index < 4) {
-                statusLabel = "Proses"; // Masuk 4 Bay Utama
-                progress = 50;
-              } else if (index >= 4) {
-                statusLabel = `Menunggu Antrean (Ke-${index - 3})`;
-                progress = 0;
+              if (dayjs(b.tanggal).isAfter(dayjs().endOf('day'))) {
+                statusLabel = "Terjadwal";
+                progress = 20;
               } else {
-                statusLabel = "Proses";
-                progress = 50;
+                // Cari antrean (hanya untuk hari ini/lalu)
+                const index = activeQueueIds.indexOf(srv.id);
+                if (index !== -1 && index < 4) {
+                  statusLabel = "Proses"; // Masuk 4 Bay Utama
+                  progress = 50;
+                } else if (index >= 4) {
+                  statusLabel = `Menunggu Antrean (Ke-${index - 3})`;
+                  progress = 0;
+                } else {
+                  statusLabel = "Proses";
+                  progress = 50;
+                }
               }
             }
           } else {
@@ -94,6 +103,8 @@ export default function ServiceHistoryPage() {
           const serviceList = (srv?.pekerjaan || b.jenis_servis || "Servis Umum").split(",").map((x: string) => x.trim()).filter((x: string) => x);
 
           return {
+            rawBookingId: b.id,
+            rawServiceId: srv?.id,
             id: srv?.nomor_invoice || `BKG-${b.id.substring(0,8).toUpperCase()}`,
             status: statusLabel,
             car: b.vehicles ? `${b.vehicles.merk} ${b.vehicles.tipe}` : "Kendaraan Dihapus",
@@ -113,6 +124,29 @@ export default function ServiceHistoryPage() {
 
     fetchData();
   }, [router, supabase]);
+
+  const handleCancelBooking = async (bookingId: string, serviceId?: string) => {
+    if (!confirm("Apakah Anda yakin ingin membatalkan booking ini?")) return;
+    
+    setIsCancelling(bookingId);
+    try {
+      const res = await fetch("/api/booking/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, service_id: serviceId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membatalkan pesanan");
+      
+      alert("Booking berhasil dibatalkan.");
+      // Refresh page to show updated status
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsCancelling(null);
+    }
+  };
 
   const filteredHistory = history.filter(h => {
     if (activeTab === "Menunggu") return h.status.includes("Menunggu");
@@ -262,8 +296,12 @@ export default function ServiceHistoryPage() {
                             <span className="text-[#E07A5F] font-bold text-sm mb-2 block border border-[#E07A5F]/30 bg-[#E07A5F]/10 py-2 rounded-xl">
                               {item.status}
                             </span>
-                            <button className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20">
-                              Batalkan
+                            <button 
+                              onClick={() => handleCancelBooking(item.rawBookingId, item.rawServiceId)}
+                              disabled={isCancelling === item.rawBookingId}
+                              className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20 disabled:opacity-50"
+                            >
+                              {isCancelling === item.rawBookingId ? "Membatalkan..." : "Batalkan"}
                             </button>
                           </div>
                         )}

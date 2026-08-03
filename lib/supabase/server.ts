@@ -16,6 +16,12 @@ export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient(url, key, {
+    cookieOptions: {
+      name: 'user-auth-token'
+    },
+    auth: {
+      storageKey: 'user-auth-token'
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();
