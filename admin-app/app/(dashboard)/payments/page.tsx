@@ -61,7 +61,8 @@ export default function PaymentsPage() {
 
   const openProcessModal = (payment: Payment) => {
     setSelectedPayment(payment);
-    setPaymentMethod(payment.metode || "tunai");
+    // Jika dari online booking DP, asumsikan default transfer (karena bayar online)
+    setPaymentMethod(payment.metode === 'dp' ? 'transfer' : (payment.metode || "tunai"));
     setIsProcessModalOpen(true);
   };
 
@@ -153,7 +154,10 @@ export default function PaymentsPage() {
                 filteredPayments.map((payment) => (
                   <tr key={payment.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-mono text-[#E07A5F] font-bold">{payment.nomor_invoice}</div>
+                      <div className="font-mono text-[#E07A5F] font-bold flex items-center gap-2">
+                        {payment.nomor_invoice}
+                        {payment.metode === 'dp' && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-wider">DP</span>}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-semibold text-white">{payment.users?.nama}</div>
@@ -187,7 +191,11 @@ export default function PaymentsPage() {
                           <Wallet className="w-3.5 h-3.5" /> Proses Bayar
                         </button>
                       ) : (
-                        <button className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" title="Cetak Struk">
+                        <button 
+                          onClick={() => window.open(`/payments/invoice/${payment.id}`, '_blank')}
+                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" 
+                          title="Cetak Struk"
+                        >
                           <FileSignature className="w-4 h-4" />
                         </button>
                       )}
@@ -224,7 +232,12 @@ export default function PaymentsPage() {
               
               <form onSubmit={handleCompletePayment} className="p-6 space-y-6">
                 
-                <div className="bg-black/30 p-4 rounded-xl border border-white/5 text-center">
+                <div className="bg-black/30 p-4 rounded-xl border border-white/5 text-center relative">
+                  {selectedPayment.metode === 'dp' && (
+                    <div className="absolute top-2 right-2 bg-blue-500/20 text-blue-400 text-[10px] px-2 py-1 rounded font-bold uppercase">
+                      Tagihan DP
+                    </div>
+                  )}
                   <div className="text-xs text-white/40 uppercase tracking-widest mb-1">Total Tagihan</div>
                   <div className="text-3xl font-black text-[#E07A5F]">
                     Rp {selectedPayment.total.toLocaleString("id-ID")}

@@ -33,11 +33,20 @@ export default function ServicesPage() {
   const [jasas, setJasas] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Data master dari inventory
+  const [inventory, setInventory] = useState<any[]>([]);
+
   const supabase = createClient();
 
   useEffect(() => {
     fetchServices();
+    fetchInventory();
   }, []);
+
+  const fetchInventory = async () => {
+    const { data } = await supabase.from("spareparts").select("*").gt("stok", 0).order("nama", { ascending: true });
+    if (data) setInventory(data);
+  };
 
   const fetchServices = async () => {
     setLoading(true);
@@ -66,6 +75,15 @@ export default function ServicesPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // LOGIKA ANTREAN (MAX 4 BAY)
+  // Hanya berlaku untuk status 'proses'
+  const prosesServices = filteredServices.filter(s => s.status === "proses");
+  const activeBays = prosesServices.slice(0, 4);
+  const waitingQueue = prosesServices.slice(4);
+  
+  // Untuk status selain 'proses' (misal selesai/dibatalkan), tampilkan semua
+  const otherServices = filteredServices.filter(s => s.status !== "proses");
+
   const openEditModal = (service: Service) => {
     setSelectedService(service);
     setSpareparts(service.sparepart || []);
@@ -79,7 +97,23 @@ export default function ServicesPage() {
 
   const updateSparepart = (index: number, field: string, value: any) => {
     const updated = [...spareparts];
-    updated[index][field] = value;
+    
+    // Jika ganti barang dari dropdown, update juga harga modal & jual otomatis
+    if (field === "nama") {
+      const selectedItem = inventory.find(inv => inv.nama === value);
+      if (selectedItem) {
+        updated[index].id_inventory = selectedItem.id;
+        updated[index].nama = selectedItem.nama;
+        updated[index].harga_modal = selectedItem.harga_modal;
+        updated[index].harga_jual = selectedItem.harga_jual;
+      } else {
+        // Jika pilih opsi kosong atau custom
+        updated[index].nama = value;
+      }
+    } else {
+      updated[index][field] = value;
+    }
+    
     setSpareparts(updated);
   };
 
@@ -130,20 +164,51 @@ export default function ServicesPage() {
       return;
     }
 
-    // Jika ditandai selesai, buatkan tagihan di tabel payments
+    // Jika ditandai selesai, potong stok di inventaris dan buatkan tagihan di tabel payments
     if (markAsSelesai) {
-      const { error: paymentError } = await supabase
+      // 1. Kurangi stok inventory
+      for (const sp of spareparts) {
+        if (sp.id_inventory) {
+          // Ambil stok saat ini (idealnya pakai RPC agar aman, tapi untuk MVP via update biasa)
+          const invItem = inventory.find(i => i.id === sp.id_inventory);
+          if (invItem) {
+            await supabase.from("spareparts")
+              .update({ stok: Math.max(0, invItem.stok - Number(sp.qty)) })
+              .eq("id", sp.id_inventory);
+          }
+        }
+      }
+
+      // 2. Cek pembayaran sebelumnya (DP atau Lunas)
+      let totalSudahDibayar = 0;
+      const { data: existingPayments } = await supabase
         .from("payments")
-        .insert({
-          service_id: selectedService.id,
-          user_id: (selectedService as any).user_id,
-          nomor_invoice: selectedService.nomor_invoice,
-          total: finalTotal,
-          status: "pending"
-        });
-        
-      if (paymentError) {
-        alert("Servis selesai, tapi gagal membuat tagihan: " + paymentError.message);
+        .select("total")
+        .eq("service_id", selectedService.id)
+        .not("status", "in", '("gagal","refund")');
+
+      if (existingPayments) {
+        totalSudahDibayar = existingPayments.reduce((sum, p) => sum + Number(p.total), 0);
+      }
+
+      const sisaTagihan = finalTotal - totalSudahDibayar;
+
+      // 3. Buat tagihan baru HANYA jika masih ada sisa
+      if (sisaTagihan > 0) {
+        const { error: paymentError } = await supabase
+          .from("payments")
+          .insert({
+            service_id: selectedService.id,
+            user_id: (selectedService as any).user_id,
+            nomor_invoice: selectedService.nomor_invoice,
+            total: sisaTagihan,
+            status: "pending",
+            metode: "tunai"
+          });
+          
+        if (paymentError) {
+          alert("Servis selesai, tapi gagal membuat tagihan: " + paymentError.message);
+        }
       }
     }
 
@@ -166,84 +231,189 @@ export default function ServicesPage() {
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 bg-[#1A1A1A] p-4 rounded-2xl border border-white/10">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-          <input 
-            type="text" 
-            placeholder="Cari invoice, nama, atau nopol..."
+          <input
+            type="text"
+            placeholder="Cari invoice, pelanggan, atau plat nomor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors"
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:border-[#E07A5F] focus:outline-none transition"
           />
         </div>
-        <select 
+        <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
+          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-[#E07A5F] focus:outline-none transition min-w-[150px]"
         >
           <option value="all">Semua Status</option>
-          <option value="proses">Dalam Proses</option>
-          <option value="selesai">Selesai Dikerjakan</option>
+          <option value="proses">Dalam Antrean / Proses</option>
+          <option value="selesai">Selesai</option>
+          <option value="dibatalkan">Dibatalkan</option>
         </select>
       </div>
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {loading ? (
-          <div className="col-span-full py-12 text-center text-white/40">Memuat data servis...</div>
-        ) : filteredServices.length === 0 ? (
-          <div className="col-span-full py-12 text-center text-white/40">Tidak ada servis ditemukan.</div>
-        ) : (
-          filteredServices.map((service) => (
-            <motion.div 
-              key={service.id}
-              layout
-              className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-all flex flex-col relative overflow-hidden"
-            >
-              {service.status === 'selesai' && (
-                <div className="absolute -right-12 top-6 bg-green-500/20 text-green-400 border border-green-500/30 px-12 py-1 text-xs font-bold uppercase tracking-widest rotate-45">
-                  SELESAI
-                </div>
-              )}
-
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="font-mono text-[#E07A5F] font-bold">{service.nomor_invoice || "INV-PENDING"}</div>
-                  <div className="text-white/60 text-xs mt-1">Mekanik: {service.mekanik || "-"}</div>
-                </div>
-              </div>
-
-              <div className="space-y-4 flex-1">
-                <div>
-                  <h3 className="font-semibold text-lg text-white">{service.users?.nama}</h3>
-                  <p className="text-sm text-white/60">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="font-mono text-white/80">({service.vehicles?.nomor_polisi})</span></p>
+      {loading ? (
+        <div className="text-center py-20 text-white/50">Memuat data servis...</div>
+      ) : (
+        <div className="space-y-10">
+          {/* TAMPILAN JIKA FILTER = PROSES (Atau All yang memiliki proses) */}
+          {(filterStatus === "proses" || filterStatus === "all") && (
+            <>
+              {/* 4 BAY UTAMA */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-xl font-bold text-white">Sedang Dikerjakan (Bay Aktif)</h2>
+                  <span className="bg-[#E07A5F]/20 text-[#E07A5F] px-3 py-1 rounded-full text-xs font-bold border border-[#E07A5F]/30">
+                    {activeBays.length} / 4 Slot
+                  </span>
                 </div>
                 
-                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                  <div className="text-xs text-white/40 mb-1">PEKERJAAN</div>
-                  <div className="text-sm text-white/80 line-clamp-2">{service.pekerjaan || service.keluhan || "-"}</div>
-                </div>
-
-                <div className="flex justify-between items-end pt-2 border-t border-white/10">
-                  <div className="text-xs text-white/40">Total Sementara</div>
-                  <div className="font-bold text-lg text-white">Rp {service.total.toLocaleString("id-ID")}</div>
-                </div>
+                {activeBays.length === 0 ? (
+                  <div className="bg-white/5 border border-white/10 border-dashed rounded-2xl p-10 text-center text-white/40">
+                    Tidak ada kendaraan yang sedang dikerjakan.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {activeBays.map((service, index) => (
+                      <motion.div
+                        key={service.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-between hover:border-white/30 transition-colors relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 bg-[#E07A5F] text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">
+                          BAY {index + 1}
+                        </div>
+                        
+                        <div className="flex justify-between items-start mb-4 pt-2">
+                          <div>
+                            <h3 className="text-xl font-bold text-white mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
+                            <p className="text-[#E07A5F] font-mono font-semibold">{service.vehicles?.nomor_polisi}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2 mb-6 text-sm">
+                          <div className="flex justify-between border-b border-white/5 pb-2">
+                            <span className="text-white/50">Pelanggan</span>
+                            <span className="text-white">{service.users?.nama}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-white/5 pb-2">
+                            <span className="text-white/50">Pekerjaan</span>
+                            <span className="text-white text-right max-w-[200px] truncate">{service.pekerjaan}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-white/50">Mekanik</span>
+                            <span className="text-white">{service.mekanik || "-"}</span>
+                          </div>
+                        </div>
+                        
+                        <button
+                          onClick={() => openEditModal(service)}
+                          className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                        >
+                          <Wrench className="w-4 h-4" /> Kerjakan & Selesaikan
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="mt-6">
-                <button 
-                  onClick={() => openEditModal(service)}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors flex items-center justify-center gap-2"
-                >
-                  {service.status === 'selesai' ? <FileText className="w-4 h-4" /> : <Wrench className="w-4 h-4" />}
-                  {service.status === 'selesai' ? "Lihat Detail" : "Kerjakan & Update"}
-                </button>
+              {/* ANTREAN MENUNGGU */}
+              <div>
+                <div className="flex items-center gap-3 mb-4 mt-8">
+                  <h2 className="text-xl font-bold text-white/70">Daftar Antrean (Menunggu Slot)</h2>
+                  <span className="bg-white/10 text-white/50 px-3 py-1 rounded-full text-xs font-bold border border-white/10">
+                    {waitingQueue.length} Kendaraan
+                  </span>
+                </div>
+                
+                {waitingQueue.length === 0 ? (
+                  <div className="bg-transparent border border-white/5 border-dashed rounded-2xl p-6 text-center text-white/30 text-sm">
+                    Antrean kosong.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {waitingQueue.map((service, index) => (
+                      <div key={service.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-80">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/40 font-black text-lg">
+                            #{index + 1}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-white/50 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => openEditModal(service)}
+                          className="bg-white/5 hover:bg-white/10 text-white/70 text-xs font-bold py-2 px-4 rounded-lg transition border border-white/10"
+                        >
+                          Edit Data
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+            </>
+          )}
+
+          {/* TAMPILAN JIKA FILTER = SELESAI / DIBATALKAN */}
+          {(filterStatus !== "proses") && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {otherServices.length === 0 ? (
+                <div className="col-span-full text-center py-10 text-white/40">Tidak ada data.</div>
+              ) : (
+                otherServices.map((service) => (
+                  <motion.div
+                    key={service.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-between hover:border-white/30 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <span className="text-[10px] text-white/50 font-bold tracking-wider uppercase mb-1 block">
+                          {service.nomor_invoice}
+                        </span>
+                        <h3 className="text-xl font-bold text-white mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
+                        <p className="text-[#E07A5F] font-mono font-semibold">{service.vehicles?.nomor_polisi}</p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                        service.status === 'selesai' ? "bg-green-500/20 text-green-500 border border-green-500/30" : 
+                        "bg-red-500/20 text-red-500 border border-red-500/30"
+                      }`}>
+                        {service.status}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2 mb-6 text-sm">
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/50">Pelanggan</span>
+                        <span className="text-white">{service.users?.nama}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-white/5 pb-2">
+                        <span className="text-white/50">Total Biaya</span>
+                        <span className="text-white font-bold">Rp {service.total.toLocaleString("id-ID")}</span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => openEditModal(service)}
+                      className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                    >
+                      <FileText className="w-4 h-4" /> Lihat Detail
+                    </button>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Edit Modal (Input Sparepart & Jasa) */}
       <AnimatePresence>
@@ -295,13 +465,31 @@ export default function ServicesPage() {
                       {spareparts.map((item, index) => (
                         <div key={index} className="flex flex-col sm:flex-row gap-3 items-end bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
                           <div className="flex-1 w-full">
-                            <label className="block text-xs text-white/40 mb-1">Nama Barang</label>
-                            <input 
-                              type="text" value={item.nama} onChange={(e) => updateSparepart(index, "nama", e.target.value)}
+                            <label className="block text-xs text-white/40 mb-1">Pilih Barang dari Inventaris</label>
+                            <select 
+                              value={item.nama} onChange={(e) => updateSparepart(index, "nama", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
-                              placeholder="Misal: Oli Mesin"
-                            />
+                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 cursor-pointer"
+                            >
+                              <option value="">-- Ketik manual atau pilih --</option>
+                              {inventory.map(inv => (
+                                <option key={inv.id} value={inv.nama}>
+                                  {inv.nama} (Stok: {inv.stok})
+                                </option>
+                              ))}
+                            </select>
+                            
+                            {/* Input manual fallback jika barang tidak ada di inventory */}
+                            {(!item.nama || !inventory.find(inv => inv.nama === item.nama)) && (
+                              <input 
+                                type="text" 
+                                value={item.nama} 
+                                onChange={(e) => updateSparepart(index, "nama", e.target.value)}
+                                disabled={selectedService.status === 'selesai'}
+                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 mt-2"
+                                placeholder="Nama barang custom..."
+                              />
+                            )}
                           </div>
                           <div className="w-full sm:w-32">
                             <label className="block text-xs text-white/40 mb-1">Harga Modal</label>

@@ -9,7 +9,8 @@ import {
   CalendarCheck, 
   Wrench, 
   WalletCards,
-  LogOut
+  LogOut,
+  Package
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,7 +19,9 @@ const navItems = [
   { name: "Pengguna", href: "/users", icon: Users },
   { name: "Pesanan", href: "/bookings", icon: CalendarCheck },
   { name: "Servis", href: "/services", icon: Wrench },
-  { name: "Transaksi", href: "/payments", icon: WalletCards },
+  { name: "Kasir", href: "/payments", icon: WalletCards },
+  { name: "Stok Barang", href: "/inventory", icon: Package },
+
   { name: "Laporan", href: "/reports", icon: LayoutDashboard },
 ];
 

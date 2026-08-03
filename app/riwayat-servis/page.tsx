@@ -1,66 +1,123 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { User, Car, Wrench, Download, Calendar, Clock, MapPin, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { User, Car, Wrench, Download, Calendar, MapPin, Search } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ServiceHistoryPage() {
+  const router = useRouter();
+  const supabase = createClient();
   const [activeTab, setActiveTab] = useState("Menunggu");
+  
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [myCars, setMyCars] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const myCars = [
-    { brand: "Porsche", model: "911 GT3 RS", year: 2020, plate: "B 911 CRA", nextService: "12 Okt 2026" },
-    { brand: "BMW", model: "M4 Competition", year: 2022, plate: "B 444 M", nextService: "5 Sep 2026" },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login?redirect=/riwayat-servis");
+        return;
+      }
 
-  const history = [
-    {
-      id: "INV-2026-0901",
-      status: "Menunggu",
-      car: "Porsche 911 GT3 RS",
-      date: "01 September 2026",
-      services: ["Pengecekan Kaki-Kaki", "Ganti Kampas Rem"],
-      total: 3200000,
-      branch: "Auto Craft Jakarta Selatan",
-      technician: "-",
-      progress: 0,
-    },
-    {
-      id: "INV-2026-0812",
-      status: "Proses",
-      car: "Porsche 911 GT3 RS",
-      date: "12 Agustus 2026",
-      services: ["Custom Exhaust System", "General Tune Up"],
-      total: 8500000,
-      branch: "Auto Craft Jakarta Selatan",
-      technician: "Budi (Master Mechanic)",
-      progress: 65,
-    },
-    {
-      id: "INV-2026-0510",
-      status: "Selesai",
-      car: "BMW M4 Competition",
-      date: "10 Mei 2026",
-      services: ["Ganti Oli Premium", "Spooring & Balancing"],
-      total: 1550000,
-      branch: "Auto Craft Jakarta Barat",
-      technician: "Ahmad (Engine Specialist)",
-      progress: 100,
-    },
-    {
-      id: "INV-2025-1120",
-      status: "Selesai",
-      car: "Porsche 911 GT3 RS",
-      date: "20 November 2025",
-      services: ["Premium Auto Detailing"],
-      total: 3500000,
-      branch: "Auto Craft Serpong",
-      technician: "Reza (Detailing Expert)",
-      progress: 100,
-    }
-  ];
+      setUserProfile({
+        name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Pengguna",
+        points: 1250 // Dummy loyalitas
+      });
 
-  const filteredHistory = history.filter(h => h.status === activeTab);
+      const { data: vehiclesData } = await supabase
+        .from("vehicles")
+        .select("*")
+        .eq("user_id", user.id);
+        
+      if (vehiclesData) {
+        setMyCars(vehiclesData.map(v => ({
+          brand: v.merk,
+          model: v.tipe,
+          year: v.tahun,
+          plate: v.nomor_polisi,
+          nextService: "Cek Berkala"
+        })));
+      }
+
+      const { data: bookingsData } = await supabase
+        .from("bookings")
+        .select("*, vehicles(*), services(*)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const { data: allProsesServices } = await supabase
+        .from("services")
+        .select("id")
+        .eq("status", "proses")
+        .order("created_at", { ascending: true });
+
+      const prosesIds = allProsesServices ? allProsesServices.map(s => s.id) : [];
+
+      if (bookingsData) {
+        const mapped = bookingsData.map((b: any) => {
+          const srv = b.services && b.services.length > 0 ? b.services[0] : null;
+          
+          let statusLabel = "Menunggu";
+          let progress = 0;
+          
+          if (srv) {
+            if (srv.status === 'selesai') {
+              statusLabel = "Selesai";
+              progress = 100;
+            } else if (srv.status === 'proses') {
+              // Cari antrean
+              const index = prosesIds.indexOf(srv.id);
+              if (index !== -1 && index < 4) {
+                statusLabel = "Proses"; // Masuk 4 Bay Utama
+                progress = 50;
+              } else if (index >= 4) {
+                statusLabel = `Menunggu Antrean (Ke-${index - 3})`;
+                progress = 0;
+              } else {
+                statusLabel = "Proses";
+                progress = 50;
+              }
+            }
+          } else {
+            if (b.status === 'batal') statusLabel = "Batal";
+          }
+
+          const dateObj = new Date(b.tanggal);
+          const formattedDate = dateObj.toLocaleDateString("id-ID", { day: '2-digit', month: 'long', year: 'numeric' });
+
+          const serviceList = (srv?.pekerjaan || b.jenis_servis || "Servis Umum").split(",").map((x: string) => x.trim()).filter((x: string) => x);
+
+          return {
+            id: srv?.nomor_invoice || `BKG-${b.id.substring(0,8).toUpperCase()}`,
+            status: statusLabel,
+            car: b.vehicles ? `${b.vehicles.merk} ${b.vehicles.tipe}` : "Kendaraan Dihapus",
+            date: formattedDate,
+            services: serviceList.length > 0 ? serviceList : ["Servis Umum"],
+            total: srv?.total || 0,
+            branch: "Auto Craft Pusat",
+            technician: srv?.mekanik || b.mekanik || "-",
+            progress
+          };
+        });
+        setHistory(mapped);
+      }
+      
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [router, supabase]);
+
+  const filteredHistory = history.filter(h => {
+    if (activeTab === "Menunggu") return h.status.includes("Menunggu");
+    return h.status === activeTab;
+  });
 
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] font-sans selection:bg-[#E07A5F]/30 pb-24">
@@ -75,9 +132,9 @@ export default function ServiceHistoryPage() {
           </Link>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#E07A5F] flex items-center justify-center text-white font-bold text-xs">
-              AD
+              {userProfile?.name?.charAt(0).toUpperCase() || "U"}
             </div>
-            <span className="text-white text-sm font-bold hidden sm:block">Ahmad Dhani</span>
+            <span className="text-white text-sm font-bold hidden sm:block">{userProfile?.name || "Memuat..."}</span>
           </div>
         </div>
       </header>
@@ -91,11 +148,11 @@ export default function ServiceHistoryPage() {
             <div className="w-24 h-24 rounded-full bg-[#1A1A1A] border-4 border-[#E07A5F] mx-auto mb-4 flex items-center justify-center">
               <User className="w-10 h-10 text-white/50" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-1">Ahmad Dhani</h2>
-            <p className="text-[#E07A5F] text-xs font-black uppercase tracking-widest mb-4">Member Platinum</p>
+            <h2 className="text-xl font-bold text-white mb-1">{userProfile?.name || "Pengguna"}</h2>
+            <p className="text-[#E07A5F] text-xs font-black uppercase tracking-widest mb-4">Member Reguler</p>
             <div className="bg-[#1A1A1A] rounded-xl py-3 px-4 flex justify-between items-center text-sm">
               <span className="text-white/60">Poin Loyalitas</span>
-              <span className="text-white font-bold">12,500 Pts</span>
+              <span className="text-white font-bold">{userProfile?.points || 0} Pts</span>
             </div>
           </div>
 
@@ -145,7 +202,11 @@ export default function ServiceHistoryPage() {
 
             {/* List */}
             <div className="space-y-6">
-              {filteredHistory.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-20 text-white/40">
+                  <p>Memuat riwayat servis Anda...</p>
+                </div>
+              ) : filteredHistory.length === 0 ? (
                 <div className="text-center py-20 text-white/40">
                   <Wrench className="w-16 h-16 mx-auto mb-4 opacity-20" />
                   <p>Tidak ada riwayat servis untuk tab ini.</p>
@@ -196,11 +257,11 @@ export default function ServiceHistoryPage() {
                       </div>
                       
                       <div className="w-full">
-                        {item.status === "Menunggu" && (
-                          <div className="space-y-2">
-                            <button className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 px-4 rounded-xl transition text-sm">
-                              Reschedule
-                            </button>
+                        {item.status.includes("Menunggu") && (
+                          <div className="space-y-2 text-center">
+                            <span className="text-[#E07A5F] font-bold text-sm mb-2 block border border-[#E07A5F]/30 bg-[#E07A5F]/10 py-2 rounded-xl">
+                              {item.status}
+                            </span>
                             <button className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20">
                               Batalkan
                             </button>
