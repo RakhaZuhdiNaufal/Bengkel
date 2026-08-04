@@ -168,10 +168,10 @@ export default function UsersPage() {
           onChange={(e) => setFilterRole(e.target.value)}
           className="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
         >
-          <option value="all">Semua Peran</option>
-          <option value="customer">Customer</option>
-          <option value="kasir">Kasir</option>
-          <option value="admin">Admin</option>
+          <option className="bg-[#121212]" value="all">Semua Peran</option>
+          <option className="bg-[#121212]" value="customer">Customer</option>
+          <option className="bg-[#121212]" value="kasir">Kasir</option>
+          <option className="bg-[#121212]" value="admin">Admin</option>
         </select>
       </div>
 
@@ -278,9 +278,9 @@ export default function UsersPage() {
                     onChange={(e) => setEditRole(e.target.value)}
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                   >
-                    <option value="customer">Customer (Pelanggan Biasa)</option>
-                    <option value="kasir">Kasir (Akses Transaksi)</option>
-                    <option value="admin">Admin (Akses Penuh)</option>
+                    <option className="bg-[#121212]" value="customer">Customer (Pelanggan Biasa)</option>
+                    <option className="bg-[#121212]" value="kasir">Kasir (Akses Transaksi)</option>
+                    <option className="bg-[#121212]" value="admin">Admin (Akses Penuh)</option>
                   </select>
                 </div>
 
@@ -293,9 +293,9 @@ export default function UsersPage() {
                     onChange={(e) => setEditStatus(e.target.value)}
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                   >
-                    <option value="aktif">Aktif</option>
-                    <option value="nonaktif">Nonaktif</option>
-                    <option value="suspended">Suspended (Blokir)</option>
+                    <option className="bg-[#121212]" value="aktif">Aktif</option>
+                    <option className="bg-[#121212]" value="nonaktif">Nonaktif</option>
+                    <option className="bg-[#121212]" value="suspended">Suspended (Blokir)</option>
                   </select>
                 </div>
               </div>
@@ -394,9 +394,9 @@ export default function UsersPage() {
                     onChange={(e) => setAddRole(e.target.value)}
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                   >
-                    <option value="kasir">Kasir (Akses Transaksi)</option>
-                    <option value="admin">Admin (Akses Penuh)</option>
-                    <option value="customer">Pelanggan Offline</option>
+                    <option className="bg-[#121212]" value="kasir">Kasir (Akses Transaksi)</option>
+                    <option className="bg-[#121212]" value="admin">Admin (Akses Penuh)</option>
+                    <option className="bg-[#121212]" value="customer">Pelanggan Offline</option>
                   </select>
                 </div>
                 <div className="pt-4 flex gap-3 justify-end">

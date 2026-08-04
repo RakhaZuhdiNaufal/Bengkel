@@ -36,6 +36,8 @@ export default function RegisterPage() {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
+      // Sign out immediately so they are forced to log in manually
+      await supabase.auth.signOut();
       router.push("/login");
     }
   };

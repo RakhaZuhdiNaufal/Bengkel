@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { CalendarClock, CheckCircle, XCircle, Wrench, Search } from "lucide-react";
+import { CalendarClock, CheckCircle, XCircle, Wrench, Search, LogIn } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/id";
 
@@ -18,6 +18,8 @@ type Booking = {
   status: string;
   catatan: string;
   created_at: string;
+  estimasi_total: number;
+  service_items: any[];
   users: { nama: string; nomor_hp: string; nomor_pelanggan: string };
   vehicles: { merk: string; tipe: string; nomor_polisi: string };
 };
@@ -119,28 +121,92 @@ export default function BookingsPage() {
       return;
     }
 
-    // Jika status diubah menjadi "diterima", buatkan record kosong di tabel `services` otomatis!
-    if (newStatus === "diterima") {
-      const { error: serviceError } = await supabase
-        .from("services")
-        .insert({
-          booking_id: selectedBooking.id,
-          user_id: (selectedBooking as any).user_id,
-          vehicle_id: (selectedBooking as any).vehicle_id,
-          mekanik: newMekanik,
-          keluhan: selectedBooking.keluhan,
-          pekerjaan: selectedBooking.jenis_servis,
-          status: "proses"
-        });
-        
-      if (serviceError) {
-        alert("Pesanan diterima, tapi gagal membuat antrean servis: " + serviceError.message);
+    // Jika status diubah menjadi "diterima", BUAT INVOICE DEPOSIT otomatis.
+    // Service (Work Order) hanya dibuat saat Admin klik "Check-In" (customer hadir fisik).
+    if (newStatus === "diterima" && selectedBooking) {
+      const estimasiTotal = (selectedBooking as any).estimasi_total || 0;
+      if (estimasiTotal > 0) {
+        const depositAmount = Math.round(estimasiTotal * 0.3); // DP 30%
+        const { error: payErr } = await supabase
+          .from("payments")
+          .insert({
+            user_id: (selectedBooking as any).user_id,
+            booking_id: selectedBooking.id,
+            metode: "dp",
+            total: depositAmount,
+            status: "pending"
+          });
+        if (payErr) {
+          alert("Pesanan diterima, tapi gagal membuat tagihan deposit: " + payErr.message);
+        }
       }
     }
     
     setIsProcessModalOpen(false);
     fetchBookings();
     setSaving(false);
+  };
+
+  // === CHECK-IN: Gerbang Utama Pembuatan Work Order ===
+  const handleCheckIn = async (booking: Booking, isEarly: boolean = false) => {
+    const confirmMsg = isEarly 
+      ? `⚠️ DROP-OFF AWAL ⚠️\nPesanan ini dijadwalkan untuk hari ke depan, tapi akan di Check-In HARI INI.\n\nCustomer: ${booking.users?.nama}\nKendaraan: ${booking.vehicles?.merk} ${booking.vehicles?.tipe}\n\nYakin pelanggan menitipkan mobilnya lebih awal?` 
+      : `Check-In customer ${booking.users?.nama}?\nKendaraan: ${booking.vehicles?.merk} ${booking.vehicles?.tipe} (${booking.vehicles?.nomor_polisi})\n\nIni akan membuat Work Order dan memasukkan kendaraan ke antrean servis.`;
+      
+    if (!confirm(confirmMsg)) return;
+    
+    setSaving(true);
+    
+    // 1. Update booking status ke checked_in
+    const { error: updateErr } = await supabase
+      .from("bookings")
+      .update({ status: "checked_in" })
+      .eq("id", booking.id);
+    
+    if (updateErr) {
+      alert("Gagal melakukan Check-In: " + updateErr.message);
+      setSaving(false);
+      return;
+    }
+
+    // 2. Buat Service Record (Work Order) dengan status 'menunggu'
+    const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const estimasiTotal = (booking as any).estimasi_total || 0;
+    
+    const { data: newService, error: serviceErr } = await supabase
+      .from("services")
+      .insert({
+        nomor_invoice: invoiceNumber,
+        booking_id: booking.id,
+        user_id: (booking as any).user_id,
+        vehicle_id: (booking as any).vehicle_id,
+        mekanik: booking.mekanik,
+        keluhan: booking.keluhan,
+        pekerjaan: booking.jenis_servis,
+        total: estimasiTotal,
+        status: "menunggu"
+      })
+      .select("id")
+      .single();
+
+    if (serviceErr) {
+      alert("Check-In berhasil, tapi gagal membuat Work Order: " + serviceErr.message);
+      setSaving(false);
+      fetchBookings();
+      return;
+    }
+
+    // 3. Update payment yang terkait booking ini, assign service_id
+    if (newService) {
+      await supabase
+        .from("payments")
+        .update({ service_id: newService.id, nomor_invoice: invoiceNumber })
+        .eq("booking_id", booking.id);
+    }
+
+    alert(`✅ Check-In berhasil!\n${booking.users?.nama} - ${booking.vehicles?.nomor_polisi}\nWork Order: ${invoiceNumber}`);
+    setSaving(false);
+    fetchBookings();
   };
 
   const processWalkinCreation = async (userId: string) => {
@@ -152,7 +218,8 @@ export default function BookingsPage() {
         merk: walkinMerk,
         tipe: walkinTipe,
         nomor_polisi: walkinNopol.toUpperCase(),
-        tahun: new Date().getFullYear() // default
+        tahun: new Date().getFullYear(), // default
+        warna: "-" // default karena not-null
       })
       .select("id")
       .single();
@@ -288,11 +355,12 @@ export default function BookingsPage() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
         >
-          <option value="all">Semua Status</option>
-          <option value="menunggu">Menunggu Konfirmasi</option>
-          <option value="diterima">Diterima</option>
-          <option value="ditolak">Ditolak</option>
-          <option value="selesai">Selesai</option>
+          <option className="bg-[#121212]" value="all">Semua Status</option>
+          <option className="bg-[#121212]" value="menunggu">Menunggu Konfirmasi</option>
+          <option className="bg-[#121212]" value="diterima">Diterima (Belum Check-In)</option>
+          <option className="bg-[#121212]" value="checked_in">Sudah Check-In</option>
+          <option className="bg-[#121212]" value="ditolak">Ditolak</option>
+          <option className="bg-[#121212]" value="batal">Dibatalkan</option>
         </select>
       </div>
 
@@ -320,12 +388,13 @@ export default function BookingsPage() {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            booking.status === 'checked_in' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                             booking.status === 'diterima' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                            booking.status === 'ditolak' || booking.status === 'dibatalkan' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                            booking.status === 'ditolak' || booking.status === 'dibatalkan' || booking.status === 'batal' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
                             booking.status === 'menunggu' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
                             'bg-blue-500/20 text-blue-400 border border-blue-500/30'
                           }`}>
-                            {booking.status}
+                            {booking.status === 'checked_in' ? 'Checked-In' : booking.status}
                           </span>
                         </div>
                         <div className="text-right">
@@ -370,6 +439,65 @@ export default function BookingsPage() {
                           >
                             <CheckCircle className="w-4 h-4" /> Terima
                           </button>
+                        </div>
+                      )}
+
+                      {/* ACTIONS BASE ON DATE AND STATUS */}
+                      {booking.status === 'diterima' && (
+                        <div className="mt-6 border-t border-white/10 pt-4">
+                          {(booking as any).estimasi_total > 0 && (
+                            <div className="mb-3 bg-[#E07A5F]/10 border border-[#E07A5F]/30 rounded-xl px-3 py-2">
+                              <p className="text-xs text-white/50">Estimasi Deposit</p>
+                              <p className="text-sm font-bold text-[#E07A5F]">Rp {Number((booking as any).estimasi_total).toLocaleString("id-ID")}</p>
+                            </div>
+                          )}
+                          
+                          {(() => {
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const bookingDateStr = booking.tanggal.split('T')[0];
+                            
+                            // JIKA MASA LALU (Terdahulu) -> HANYA BATAL
+                            if (bookingDateStr < todayStr) {
+                              return (
+                                <button 
+                                  onClick={async () => {
+                                    if(confirm("Pelanggan ini tidak datang (No-Show). Yakin ingin membatalkan pesanan ini?")) {
+                                      await supabase.from("bookings").update({status: 'batal'}).eq('id', booking.id);
+                                      fetchBookings();
+                                    }
+                                  }}
+                                  disabled={saving}
+                                  className="w-full py-3 rounded-xl text-sm font-bold text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 border border-red-500/20 disabled:opacity-50"
+                                >
+                                  <XCircle className="w-4 h-4" /> Tandai Tidak Hadir (Batal)
+                                </button>
+                              );
+                            }
+                            
+                            // JIKA MASA DEPAN (Mendatang) -> WARNING EARLY DROP OFF
+                            if (bookingDateStr > todayStr) {
+                              return (
+                                <button 
+                                  onClick={() => handleCheckIn(booking, true)}
+                                  disabled={saving}
+                                  className="w-full py-3 rounded-xl text-sm font-bold text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/10 disabled:opacity-50 border border-yellow-500/30"
+                                >
+                                  <LogIn className="w-4 h-4" /> Early Drop-Off (Titip Awal)
+                                </button>
+                              );
+                            }
+                            
+                            // JIKA HARI INI -> NORMAL CHECK-IN
+                            return (
+                              <button 
+                                onClick={() => handleCheckIn(booking, false)}
+                                disabled={saving}
+                                className="w-full py-3 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                              >
+                                <LogIn className="w-4 h-4" /> Check-In Customer
+                              </button>
+                            );
+                          })()}
                         </div>
                       )}
                     </motion.div>
@@ -553,9 +681,9 @@ export default function BookingsPage() {
                         }}
                         className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                       >
-                        <option value="">-- Pilih Pelanggan Terdaftar --</option>
+                        <option className="bg-[#121212]" value="">-- Pilih Pelanggan Terdaftar --</option>
                         {customers.map(c => (
-                          <option key={c.id} value={c.id}>{c.nama}</option>
+                          <option className="bg-[#121212]" key={c.id} value={c.id}>{c.nama}</option>
                         ))}
                       </select>
                     </div>

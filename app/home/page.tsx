@@ -20,7 +20,9 @@ import {
   MoreHorizontal,
   Search,
   X,
+  CreditCard
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function HomePage() {
   const { user, profile } = useAuth();
@@ -28,6 +30,9 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [lang, setLang] = useState("ID");
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [pendingDeposit, setPendingDeposit] = useState<any>(null);
+
+  const supabase = createClient();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -136,6 +141,24 @@ export default function HomePage() {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
+    
+    // Fetch pending deposit
+    const checkPendingDeposit = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("payments")
+          .select("*, bookings(*)")
+          .eq("user_id", user.id)
+          .eq("metode", "dp")
+          .eq("status", "pending")
+          .limit(1)
+          .single();
+        if (data) setPendingDeposit(data);
+      }
+    };
+    checkPendingDeposit();
+
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
@@ -400,16 +423,37 @@ export default function HomePage() {
 
         {/* Banner Reminder & Empty State (Customer Dashboard) */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#121212] border border-white/10 rounded-3xl p-6 flex items-center gap-4 hover:border-white/30 transition shadow-lg">
-            <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20 flex-shrink-0">
-              <ShieldAlert className="w-6 h-6 text-red-500" />
+          
+          {pendingDeposit ? (
+            <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 rounded-3xl p-6 flex items-center gap-4 hover:border-yellow-500/50 transition shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl pointer-events-none" />
+              <div className="w-14 h-14 bg-yellow-500/20 rounded-full flex items-center justify-center border border-yellow-500/30 flex-shrink-0 z-10">
+                <CreditCard className="w-6 h-6 text-yellow-500" />
+              </div>
+              <div className="z-10">
+                <h3 className="text-white font-bold mb-1 flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                  </span>
+                  Tagihan Deposit Menunggu
+                </h3>
+                <p className="text-sm text-yellow-500/80">Anda memiliki tagihan deposit sebesar <span className="font-bold text-yellow-400">Rp {pendingDeposit.total?.toLocaleString("id-ID")}</span> yang harus dibayar.</p>
+                <Link href="/riwayat" className="inline-block mt-3 text-xs font-bold text-yellow-400 hover:text-white transition uppercase tracking-wider">Bayar Sekarang →</Link>
+              </div>
             </div>
-            <div>
-              <h3 className="text-white font-bold mb-1">Jadwal Servis Terlewat!</h3>
-              <p className="text-sm text-white/50">Porsche 911 GT3 RS Anda sudah melewati batas waktu servis rutin bulanan.</p>
-              <Link href="/booking" className="inline-block mt-3 text-xs font-bold text-[#E07A5F] hover:text-white transition uppercase tracking-wider">Jadwalkan Sekarang →</Link>
+          ) : (
+            <div className="bg-gradient-to-r from-[#1A1A1A] to-[#121212] border border-white/10 rounded-3xl p-6 flex items-center gap-4 hover:border-white/30 transition shadow-lg">
+              <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20 flex-shrink-0">
+                <ShieldAlert className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold mb-1">Jadwal Servis Terlewat!</h3>
+                <p className="text-sm text-white/50">Porsche 911 GT3 RS Anda sudah melewati batas waktu servis rutin bulanan.</p>
+                <Link href="/booking" className="inline-block mt-3 text-xs font-bold text-[#E07A5F] hover:text-white transition uppercase tracking-wider">Jadwalkan Sekarang →</Link>
+              </div>
             </div>
-          </div>
+          )}
           
           <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 flex flex-col justify-center text-center hover:border-white/30 transition shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#E07A5F]/5 rounded-full blur-2xl pointer-events-none" />

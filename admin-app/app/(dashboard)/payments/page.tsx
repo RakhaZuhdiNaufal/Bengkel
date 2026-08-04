@@ -121,9 +121,9 @@ export default function PaymentsPage() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
         >
-          <option value="all">Semua Status</option>
-          <option value="pending">Menunggu Pembayaran (Pending)</option>
-          <option value="lunas">Lunas</option>
+          <option className="bg-[#121212]" value="all">Semua Status</option>
+          <option className="bg-[#121212]" value="pending">Menunggu Pembayaran (Pending)</option>
+          <option className="bg-[#121212]" value="lunas">Lunas</option>
         </select>
       </div>
 
@@ -254,10 +254,10 @@ export default function PaymentsPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                   >
-                    <option value="tunai">Tunai (Cash)</option>
-                    <option value="transfer">Transfer Bank</option>
-                    <option value="qris">QRIS E-Wallet</option>
-                    <option value="kartu">Kartu Debit / Kredit</option>
+                    <option className="bg-[#121212]" value="tunai">Tunai (Cash)</option>
+                    <option className="bg-[#121212]" value="transfer">Transfer Bank</option>
+                    <option className="bg-[#121212]" value="qris">QRIS E-Wallet</option>
+                    <option className="bg-[#121212]" value="kartu">Kartu Debit / Kredit</option>
                   </select>
                 </div>
 

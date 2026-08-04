@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { vehicles, branches, services } from "@/data/dummy";
-import { CheckCircle2, ChevronRight, ChevronLeft, Wrench, User, Calendar, MapPin, Car, AlertTriangle, Shield, Clock, Copy, CreditCard } from "lucide-react";
+import { CheckCircle2, ChevronRight, ChevronLeft, Wrench, User, Calendar, MapPin, Car } from "lucide-react";
 
 interface BookingData {
   vehicleBrand: string;
@@ -20,26 +20,9 @@ interface BookingData {
   date: string;
   time: string;
   notes: string;
-  paymentMethod: "dp" | "lunas" | "";
-  paymentChannel: string;
 }
 
-const paymentChannels = {
-  bank: [
-    { id: "bca", name: "Bank BCA", logo: "/bca.png", va: "8801 0812 7654 3210" },
-    { id: "bri", name: "Bank BRI", logo: "/bri.png", va: "1020 0812 9988 7766" },
-    { id: "bni", name: "Bank BNI", logo: "/bni.png", va: "9889 0812 4455 6677" },
-    { id: "mandiri", name: "Bank Mandiri", logo: "/mandiri.png", va: "8900 1234 5678 9012" },
-  ],
-  ewallet: [
-    { id: "gopay", name: "GoPay", logo: "/gopay.png" },
-    { id: "dana", name: "DANA", logo: "/dana.png" },
-    { id: "ovo", name: "OVO", logo: "/ovo.png" },
-  ],
-  qris: [
-    { id: "qris", name: "QRIS", logo: "/qris.png" },
-  ]
-};
+
 
 const technicians = [
   { id: "any", name: "Siapa Saja (Tersedia Pertama)" },
@@ -53,10 +36,6 @@ export default function BookingPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [paymentSubStep, setPaymentSubStep] = useState<"scheme" | "channel" | "detail">("scheme");
-  const [showWarning, setShowWarning] = useState(false);
-  const [warningAccepted, setWarningAccepted] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const [data, setData] = useState<BookingData>({
     vehicleBrand: "",
@@ -69,8 +48,6 @@ export default function BookingPage() {
     date: "",
     time: "",
     notes: "",
-    paymentMethod: "",
-    paymentChannel: "",
   });
 
   const [myCars, setMyCars] = useState<any[]>([]);
@@ -100,7 +77,7 @@ export default function BookingPage() {
 
   const selectedBrandObj = vehicles.find((v) => v.brand === data.vehicleBrand);
 
-  const handleNext = () => setStep((p) => Math.min(p + 1, 7));
+  const handleNext = () => setStep((p) => Math.min(p + 1, 6));
   const handlePrev = () => setStep((p) => Math.max(p - 1, 1));
 
   const toggleService = (id: string) => {
@@ -156,10 +133,14 @@ export default function BookingPage() {
         return total + (srv ? srv.price : 0);
       }, 0);
 
-      // 2. Buat Booking
+      // 2. Buat Booking (tanpa membuat Service/Work Order â€” itu tugas Admin saat Check-In)
       const combinedServices = data.selectedServices.map(id => services.find(s => s.id === id)?.name).join(", ");
+      const serviceItemsJson = data.selectedServices.map(id => {
+        const srv = services.find(s => s.id === id);
+        return { id: srv?.id, name: srv?.name, price: srv?.price };
+      });
       
-      const { data: booking, error: bErr } = await supabase
+      const { error: bErr } = await supabase
         .from("bookings")
         .insert({
           user_id: user.id,
@@ -168,43 +149,14 @@ export default function BookingPage() {
           jenis_servis: combinedServices,
           keluhan: data.notes,
           mekanik: data.technician !== "any" ? technicians.find(t => t.id === data.technician)?.name : null,
-          status: "diterima" // Langsung diterima kalau online booking
-        })
-        .select("id")
-        .single();
+          status: "menunggu",
+          service_items: serviceItemsJson,
+          estimasi_total: computedTotal
+        });
       if (bErr) throw new Error("Gagal membuat pesanan: " + bErr.message);
 
-      // 3. Buat Service Record
-      const invoiceNumber = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      const { data: serviceRec, error: sErr } = await supabase
-        .from("services")
-        .insert({
-          nomor_invoice: invoiceNumber,
-          booking_id: booking.id,
-          user_id: user.id,
-          vehicle_id: vehicleId,
-          keluhan: data.notes,
-          pekerjaan: combinedServices,
-          mekanik: data.technician !== "any" ? technicians.find(t => t.id === data.technician)?.name : null,
-          total: computedTotal,
-          status: "proses"
-        })
-        .select("id")
-        .single();
-      if (sErr) throw new Error("Gagal memasukkan antrean: " + sErr.message);
-
-      // 4. Buat Payment
-      const paymentTotal = data.paymentMethod === "dp" ? computedTotal * 0.3 : computedTotal;
-      const { error: pErr } = await supabase
-        .from("payments")
-        .insert({
-          user_id: user.id,
-          service_id: serviceRec.id,
-          metode: data.paymentMethod === "dp" ? "dp" : "transfer",
-          total: paymentTotal,
-          status: "pending"
-        });
-      if (pErr) throw new Error("Gagal membuat tagihan: " + pErr.message);
+      // Payment/Invoice TIDAK dibuat di sini.
+      // Invoice deposit akan diterbitkan otomatis oleh Admin saat menekan "Terima".
 
       setIsSuccess(true);
     } catch (err: any) {
@@ -234,18 +186,22 @@ export default function BookingPage() {
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full bg-[#1A1A1A] border border-white/10 rounded-3xl p-10 text-center shadow-2xl"
         >
-          <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10" />
+          <div className="w-20 h-20 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Calendar className="w-10 h-10" />
           </div>
-          <h2 className="text-3xl font-extrabold text-white mb-2">Booking Berhasil!</h2>
-          <p className="text-white/60 mb-8">
-            Terima kasih, jadwal servis kendaraan Anda telah dikonfirmasi. Kami telah mengirimkan detailnya ke email Anda.
+          <h2 className="text-3xl font-extrabold text-white mb-2">Pesanan Terkirim!</h2>
+          <p className="text-white/60 mb-3">
+            Pesanan Anda sedang ditinjau oleh bengkel. Kami akan mengonfirmasi ketersediaan jadwal dan mengirimkan tagihan deposit setelah pesanan diterima.
           </p>
+          <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3 mb-8">
+            <p className="text-orange-400 text-sm font-semibold">â³ Status: Menunggu Konfirmasi Bengkel</p>
+            <p className="text-orange-400/70 text-xs mt-1">Anda tidak perlu membayar apa pun saat ini.</p>
+          </div>
           <button 
             onClick={() => router.push("/riwayat-servis")}
             className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-4 rounded-xl transition"
           >
-            Lihat Tiket Booking
+            Lihat Status Pesanan
           </button>
         </motion.div>
       </div>
@@ -261,19 +217,19 @@ export default function BookingPage() {
             href="/home"
             className="flex items-center gap-2 text-white/70 hover:text-white transition text-sm font-semibold"
           >
-            ← Batal & Kembali
+            &larr; Batal & Kembali
           </Link>
           
           {/* Progress Bar */}
           <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto">
-            {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+            {[1, 2, 3, 4, 5, 6].map((num) => (
               <div key={num} className="flex items-center">
                 <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold transition-colors ${
                   step >= num ? "bg-[#E07A5F] text-white" : "bg-[#1A1A1A] text-white/40 border border-white/10"
                 }`}>
                   {num}
                 </div>
-                {num < 7 && (
+                {num < 6 && (
                   <div className={`w-2 sm:w-4 h-[1px] mx-1 sm:mx-1 ${step > num ? "bg-[#E07A5F]" : "bg-white/10"}`} />
                 )}
               </div>
@@ -571,7 +527,7 @@ export default function BookingPage() {
                         const srv = services.find(s => s.id === srvId);
                         return (
                           <li key={srvId} className="flex justify-between items-center text-sm">
-                            <span className="text-white/80">• {srv?.name}</span>
+                            <span className="text-white/80">â€¢ {srv?.name}</span>
                             <span className="font-bold text-white">Rp {srv?.price.toLocaleString("id-ID")}</span>
                           </li>
                         )
@@ -586,350 +542,6 @@ export default function BookingPage() {
               </motion.div>
             )}
 
-            {/* STEP 7: Pembayaran */}
-            {step === 7 && (
-              <motion.div key="step7" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                
-                {/* Sub-step 1: Pilih Skema DP / Lunas */}
-                {paymentSubStep === "scheme" && (
-                  <>
-                    <div className="mb-8">
-                      <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-[#E07A5F] mb-4">
-                        <CreditCard className="w-6 h-6" />
-                      </div>
-                      <h2 className="text-3xl font-extrabold text-white">Skema Pembayaran</h2>
-                      <p className="text-white/60 text-sm mt-2">Pilih skema pembayaran untuk mengamankan jadwal Anda.</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div 
-                        onClick={() => { setData({ ...data, paymentMethod: "dp" }); }}
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition flex flex-col ${
-                          data.paymentMethod === "dp" ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/5 bg-[#1A1A1A] hover:border-white/20"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="font-bold text-white">Bayar DP 30%</span>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${data.paymentMethod === "dp" ? "border-[#E07A5F]" : "border-white/20"}`}>
-                            {data.paymentMethod === "dp" && <div className="w-2.5 h-2.5 bg-[#E07A5F] rounded-full" />}
-                          </div>
-                        </div>
-                        <span className="text-2xl font-black text-[#E07A5F]">Rp {(totalBiaya * 0.3).toLocaleString("id-ID")}</span>
-                        <p className="text-xs text-white/50 mt-2">Sisa pembayaran Rp {(totalBiaya * 0.7).toLocaleString("id-ID")} dibayarkan di bengkel setelah servis selesai.</p>
-                      </div>
-                      <div 
-                        onClick={() => { setData({ ...data, paymentMethod: "lunas" }); }}
-                        className={`p-6 rounded-2xl border-2 cursor-pointer transition flex flex-col ${
-                          data.paymentMethod === "lunas" ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/5 bg-[#1A1A1A] hover:border-white/20"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center mb-4">
-                          <span className="font-bold text-white">Bayar Lunas (100%)</span>
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${data.paymentMethod === "lunas" ? "border-[#E07A5F]" : "border-white/20"}`}>
-                            {data.paymentMethod === "lunas" && <div className="w-2.5 h-2.5 bg-[#E07A5F] rounded-full" />}
-                          </div>
-                        </div>
-                        <span className="text-2xl font-black text-[#E07A5F]">Rp {totalBiaya.toLocaleString("id-ID")}</span>
-                        <p className="text-xs text-white/50 mt-2">Dapatkan ekstra <span className="text-green-400 font-bold">+500 Poin Loyalitas</span> jika membayar lunas di depan.</p>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Sub-step 2: Pilih Channel Pembayaran */}
-                {paymentSubStep === "channel" && (
-                  <>
-                    <div className="mb-6">
-                      <button onClick={() => setPaymentSubStep("scheme")} className="text-white/50 hover:text-white text-sm mb-4 flex items-center gap-1 transition"><ChevronLeft className="w-4 h-4" /> Ubah Skema</button>
-                      <h2 className="text-3xl font-extrabold text-white">Metode Pembayaran</h2>
-                      <p className="text-white/60 text-sm mt-2">Pilih metode pembayaran yang Anda inginkan.</p>
-                      <div className="mt-3 bg-[#E07A5F]/10 border border-[#E07A5F]/30 rounded-xl px-4 py-3 flex items-center gap-3">
-                        <CreditCard className="w-5 h-5 text-[#E07A5F] shrink-0" />
-                        <span className="text-sm text-white">Total yang harus dibayar: <span className="font-black text-[#E07A5F]">Rp {(data.paymentMethod === "dp" ? totalBiaya * 0.3 : totalBiaya).toLocaleString("id-ID")}</span></span>
-                      </div>
-                    </div>
-
-                    {/* Bank Transfer */}
-                    <div>
-                      <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Transfer Bank</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {paymentChannels.bank.map((ch) => (
-                          <div
-                            key={ch.id}
-                            onClick={() => setData({ ...data, paymentChannel: ch.id })}
-                            className={`p-4 rounded-xl border-2 cursor-pointer transition flex flex-col items-center gap-3 ${
-                              data.paymentChannel === ch.id ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/10 bg-[#1A1A1A] hover:border-white/30"
-                            }`}
-                          >
-                            <div className="w-full h-10 relative flex items-center justify-center">
-                              <Image src={ch.logo} alt={ch.name} width={80} height={40} className="object-contain" />
-                            </div>
-                            <span className="text-xs font-bold text-white/70">{ch.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* E-Wallet */}
-                    <div>
-                      <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">E-Wallet</h3>
-                      <div className="grid grid-cols-3 gap-3">
-                        {paymentChannels.ewallet.map((ch) => (
-                          <div
-                            key={ch.id}
-                            onClick={() => setData({ ...data, paymentChannel: ch.id })}
-                            className={`p-4 rounded-xl border-2 cursor-pointer transition flex flex-col items-center gap-3 ${
-                              data.paymentChannel === ch.id ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/10 bg-[#1A1A1A] hover:border-white/30"
-                            }`}
-                          >
-                            <div className="w-full h-10 relative flex items-center justify-center">
-                              <Image src={ch.logo} alt={ch.name} width={80} height={40} className="object-contain" />
-                            </div>
-                            <span className="text-xs font-bold text-white/70">{ch.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* QRIS */}
-                    <div>
-                      <h3 className="text-xs font-bold text-white/50 uppercase tracking-widest mb-3">QRIS (Semua Aplikasi)</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {paymentChannels.qris.map((ch) => (
-                          <div
-                            key={ch.id}
-                            onClick={() => setData({ ...data, paymentChannel: ch.id })}
-                            className={`p-4 rounded-xl border-2 cursor-pointer transition flex flex-col items-center gap-3 ${
-                              data.paymentChannel === ch.id ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/10 bg-[#1A1A1A] hover:border-white/30"
-                            }`}
-                          >
-                            <div className="w-full h-10 relative flex items-center justify-center">
-                              <Image src={ch.logo} alt={ch.name} width={80} height={40} className="object-contain" />
-                            </div>
-                            <span className="text-xs font-bold text-white/70">{ch.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Sub-step 3: Detail Pembayaran */}
-                {paymentSubStep === "detail" && (
-                  <>
-                    <div className="mb-6">
-                      <button onClick={() => setPaymentSubStep("channel")} className="text-white/50 hover:text-white text-sm mb-4 flex items-center gap-1 transition"><ChevronLeft className="w-4 h-4" /> Ubah Metode</button>
-                      <h2 className="text-3xl font-extrabold text-white">Detail Pembayaran</h2>
-                      <p className="text-white/60 text-sm mt-2">Selesaikan pembayaran Anda dalam waktu <span className="text-[#E07A5F] font-bold">24 jam</span>.</p>
-                    </div>
-
-                    {/* Timer Bar */}
-                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3 flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-yellow-500 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-yellow-500 font-bold text-sm">Batas waktu pembayaran</p>
-                        <p className="text-yellow-500/70 text-xs">Selesaikan sebelum {new Date(Date.now() + 86400000).toLocaleString("id-ID", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })} WIB</p>
-                      </div>
-                    </div>
-
-                    {/* Bank Transfer Detail */}
-                    {["bca", "bri", "bni", "mandiri"].includes(data.paymentChannel) && (() => {
-                      const bank = paymentChannels.bank.find(b => b.id === data.paymentChannel)!;
-                      const payAmount = data.paymentMethod === "dp" ? totalBiaya * 0.3 : totalBiaya;
-                      return (
-                        <div className="bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden">
-                          {/* Header */}
-                          <div className="p-5 border-b border-white/5 flex items-center gap-4">
-                            <div className="w-16 h-10 relative flex items-center justify-center bg-white rounded-lg p-1">
-                              <Image src={bank.logo} alt={bank.name} width={60} height={30} className="object-contain" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-white">{bank.name}</p>
-                              <p className="text-xs text-white/50">Virtual Account</p>
-                            </div>
-                          </div>
-                          {/* VA Number */}
-                          <div className="p-5 border-b border-white/5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-2">Nomor Virtual Account</p>
-                            <div className="flex items-center justify-between bg-black/40 rounded-xl px-4 py-3">
-                              <span className="text-xl font-mono font-black text-white tracking-widest">{bank.va}</span>
-                              <button
-                                onClick={() => { navigator.clipboard.writeText(bank.va.replace(/\s/g, "")); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                                className="flex items-center gap-1 text-[#E07A5F] hover:text-[#d0694e] text-xs font-bold transition"
-                              >
-                                <Copy className="w-4 h-4" /> {copied ? "Tersalin!" : "Salin"}
-                              </button>
-                            </div>
-                          </div>
-                          {/* Amount */}
-                          <div className="p-5 border-b border-white/5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-2">Total Pembayaran</p>
-                            <div className="flex items-center justify-between">
-                              <span className="text-3xl font-black text-[#E07A5F]">Rp {payAmount.toLocaleString("id-ID")}</span>
-                              <span className="text-xs bg-[#E07A5F]/10 text-[#E07A5F] font-bold px-3 py-1 rounded-full">{data.paymentMethod === "dp" ? "DP 30%" : "Lunas"}</span>
-                            </div>
-                            <p className="text-xs text-white/40 mt-2">Transfer tepat hingga 3 digit terakhir agar pembayaran terverifikasi otomatis.</p>
-                          </div>
-                          {/* Instructions */}
-                          <div className="p-5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-3">Cara Pembayaran</p>
-                            <ol className="space-y-2 text-sm text-white/70">
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">1</span> Buka aplikasi {bank.name} atau ATM terdekat</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">2</span> Pilih menu Transfer → Virtual Account</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">3</span> Masukkan nomor VA: <span className="font-mono font-bold text-white">{bank.va}</span></li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">4</span> Konfirmasi nama <span className="font-bold text-white">Auto Craft Indonesia</span> dan nominal</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">5</span> Selesaikan pembayaran dan simpan bukti transfer</li>
-                            </ol>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* E-Wallet Detail */}
-                    {["gopay", "dana", "ovo"].includes(data.paymentChannel) && (() => {
-                      const ew = paymentChannels.ewallet.find(e => e.id === data.paymentChannel)!;
-                      const payAmount = data.paymentMethod === "dp" ? totalBiaya * 0.3 : totalBiaya;
-                      return (
-                        <div className="bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden">
-                          <div className="p-5 border-b border-white/5 flex items-center gap-4">
-                            <div className="w-16 h-10 relative flex items-center justify-center bg-white rounded-lg p-1">
-                              <Image src={ew.logo} alt={ew.name} width={60} height={30} className="object-contain" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-white">{ew.name}</p>
-                              <p className="text-xs text-white/50">E-Wallet Payment</p>
-                            </div>
-                          </div>
-                          <div className="p-5 border-b border-white/5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-2">Nomor {ew.name} Anda</p>
-                            <input
-                              type="tel"
-                              placeholder="Contoh: 0812xxxxxxxx"
-                              className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:border-[#E07A5F] focus:outline-none transition font-mono"
-                            />
-                            <p className="text-xs text-white/30 mt-2">Masukkan nomor telepon yang terdaftar di {ew.name}</p>
-                          </div>
-                          <div className="p-5 border-b border-white/5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-2">Total Pembayaran</p>
-                            <div className="flex items-center justify-between">
-                              <span className="text-3xl font-black text-[#E07A5F]">Rp {payAmount.toLocaleString("id-ID")}</span>
-                              <span className="text-xs bg-[#E07A5F]/10 text-[#E07A5F] font-bold px-3 py-1 rounded-full">{data.paymentMethod === "dp" ? "DP 30%" : "Lunas"}</span>
-                            </div>
-                          </div>
-                          <div className="p-5">
-                            <p className="text-xs text-white/50 uppercase tracking-wider font-bold mb-3">Cara Pembayaran</p>
-                            <ol className="space-y-2 text-sm text-white/70">
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">1</span> Masukkan nomor {ew.name} Anda di atas</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">2</span> Klik "Konfirmasi & Bayar" di bawah</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">3</span> Buka notifikasi di aplikasi {ew.name}</li>
-                              <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold text-white shrink-0">4</span> Konfirmasi pembayaran dengan PIN {ew.name}</li>
-                            </ol>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* QRIS Detail */}
-                    {data.paymentChannel === "qris" && (() => {
-                      const payAmount = data.paymentMethod === "dp" ? totalBiaya * 0.3 : totalBiaya;
-                      return (
-                        <div className="bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden">
-                          <div className="p-5 border-b border-white/5 flex items-center gap-4">
-                            <div className="w-16 h-10 relative flex items-center justify-center bg-white rounded-lg p-1">
-                              <Image src="/qris.png" alt="QRIS" width={60} height={30} className="object-contain" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-white">QRIS</p>
-                              <p className="text-xs text-white/50">Scan & Pay — Semua Aplikasi</p>
-                            </div>
-                          </div>
-                          <div className="p-6 flex flex-col items-center border-b border-white/5">
-                            <div className="bg-white rounded-2xl p-4 mb-4">
-                              {/* Fake QR Code Grid */}
-                              <div className="w-48 h-48 grid grid-cols-8 grid-rows-8 gap-[2px]">
-                                {Array.from({ length: 64 }).map((_, i) => (
-                                  <div key={i} className={`rounded-[1px] ${Math.random() > 0.45 ? 'bg-black' : 'bg-white'}`} />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-xs text-white/50 text-center">Scan kode QR di atas menggunakan aplikasi<br />GoPay, DANA, OVO, atau aplikasi bank Anda</p>
-                          </div>
-                          <div className="p-5">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-xs text-white/50 uppercase tracking-wider font-bold">Total Pembayaran</p>
-                                <span className="text-3xl font-black text-[#E07A5F]">Rp {payAmount.toLocaleString("id-ID")}</span>
-                              </div>
-                              <span className="text-xs bg-[#E07A5F]/10 text-[#E07A5F] font-bold px-3 py-1 rounded-full">{data.paymentMethod === "dp" ? "DP 30%" : "Lunas"}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Security Badge */}
-                    <div className="flex items-center gap-3 bg-green-500/5 border border-green-500/20 rounded-xl px-4 py-3">
-                      <Shield className="w-5 h-5 text-green-500 shrink-0" />
-                      <p className="text-xs text-green-500/80">Transaksi Anda dilindungi enkripsi SSL 256-bit. Data pembayaran tidak disimpan di server kami.</p>
-                    </div>
-                  </>
-                )}
-
-                {/* Warning Modal */}
-                <AnimatePresence>
-                  {showWarning && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
-                      onClick={() => setShowWarning(false)}
-                    >
-                      <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-[#1A1A1A] border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl"
-                      >
-                        <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                          <AlertTriangle className="w-8 h-8 text-yellow-500" />
-                        </div>
-                        <h3 className="text-2xl font-extrabold text-white text-center mb-3">Konfirmasi Pembayaran</h3>
-                        <div className="space-y-3 mb-6">
-                          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
-                            <p className="text-red-400 text-sm font-semibold flex items-start gap-2">
-                              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                              Uang yang sudah ditransfer <span className="font-black">TIDAK DAPAT</span> dikembalikan (non-refundable).
-                            </p>
-                          </div>
-                          <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-                            <p className="text-blue-400 text-sm flex items-start gap-2">
-                              <Car className="w-4 h-4 mt-0.5 shrink-0" />
-                              Setelah pembayaran dikonfirmasi, data kendaraan Anda akan <span className="font-bold">langsung masuk ke tahap antrean servis</span>.
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => setShowWarning(false)}
-                            className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition text-sm border border-white/10"
-                          >
-                            Batal
-                          </button>
-                          <button
-                            onClick={() => { setShowWarning(false); setWarningAccepted(true); submitBooking(); }}
-                            disabled={isSubmitting}
-                            className="flex-1 bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 rounded-xl transition text-sm shadow-lg shadow-[#E07A5F]/20 disabled:opacity-50"
-                          >
-                            {isSubmitting ? "Memproses..." : "Ya, Saya Mengerti"}
-                          </button>
-                        </div>
-                      </motion.div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            )}
           </AnimatePresence>
 
           {/* Navigation Buttons */}
@@ -944,7 +556,7 @@ export default function BookingPage() {
               <ChevronLeft className="w-4 h-4" /> Kembali
             </button>
 
-            {step < 7 ? (
+            {step < 6 ? (
               <button
                 onClick={handleNext}
                 disabled={
@@ -959,35 +571,13 @@ export default function BookingPage() {
                 Selanjutnya <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
-              <>
-                {paymentSubStep === "scheme" && (
-                  <button
-                    onClick={() => setPaymentSubStep("channel")}
-                    disabled={!data.paymentMethod}
-                    className="flex items-center gap-2 bg-[#E07A5F] hover:bg-[#d0694e] text-white px-8 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Pilih Metode Pembayaran <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-                {paymentSubStep === "channel" && (
-                  <button
-                    onClick={() => setPaymentSubStep("detail")}
-                    disabled={!data.paymentChannel}
-                    className="flex items-center gap-2 bg-[#E07A5F] hover:bg-[#d0694e] text-white px-8 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Lanjutkan <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-                {paymentSubStep === "detail" && (
-                  <button
-                    onClick={() => setShowWarning(true)}
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 bg-[#E07A5F] hover:bg-[#d0694e] text-white px-8 py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-[#E07A5F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? "Memproses..." : "Konfirmasi & Bayar"}
-                  </button>
-                )}
-              </>
+              <button
+                onClick={submitBooking}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 bg-[#E07A5F] hover:bg-[#d0694e] text-white px-8 py-3 rounded-xl font-bold text-sm transition shadow-lg shadow-[#E07A5F]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? "Mengirim Pesanan..." : "Kirim Pesanan"} <CheckCircle2 className="w-4 h-4" />
+              </button>
             )}
           </div>
 

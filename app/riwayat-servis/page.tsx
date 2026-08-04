@@ -14,6 +14,8 @@ export default function ServiceHistoryPage() {
   const [activeTab, setActiveTab] = useState("Menunggu");
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
   
+  const tabs = ["Menunggu", "Di Bengkel", "Proses", "Terjadwal", "Selesai", "Batal"];
+  
   const [userProfile, setUserProfile] = useState<any>(null);
   const [myCars, setMyCars] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
@@ -49,7 +51,7 @@ export default function ServiceHistoryPage() {
 
       const { data: bookingsData } = await supabase
         .from("bookings")
-        .select("*, vehicles(*), services(*)")
+        .select("*, vehicles(*), services(*), payments(*)")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -74,6 +76,13 @@ export default function ServiceHistoryPage() {
             if (srv.status === 'selesai') {
               statusLabel = "Selesai";
               progress = 100;
+            } else if (srv.status === 'dibatalkan') {
+              statusLabel = "Batal";
+              progress = 0;
+            } else if (srv.status === 'menunggu') {
+              // Sudah Check-In tapi belum masuk Bay
+              statusLabel = "Di Bengkel (Menunggu Antrean)";
+              progress = 30;
             } else if (srv.status === 'proses') {
               if (dayjs(b.tanggal).isAfter(dayjs().endOf('day'))) {
                 statusLabel = "Terjadwal";
@@ -94,13 +103,29 @@ export default function ServiceHistoryPage() {
               }
             }
           } else {
-            if (b.status === 'batal') statusLabel = "Batal";
+            // Tidak ada service record — booking saja
+            if (b.status === 'batal' || b.status === 'dibatalkan') {
+              statusLabel = "Batal";
+            } else if (b.status === 'checked_in') {
+              statusLabel = "Di Bengkel (Menunggu Antrean)";
+              progress = 30;
+            } else if (b.status === 'diterima') {
+              statusLabel = "Menunggu Kedatangan";
+              progress = 10;
+            } else if (b.status === 'menunggu') {
+              statusLabel = "Menunggu Konfirmasi";
+              progress = 5;
+            } else if (b.status === 'ditolak') {
+              statusLabel = "Ditolak";
+            }
           }
 
           const dateObj = new Date(b.tanggal);
           const formattedDate = dateObj.toLocaleDateString("id-ID", { day: '2-digit', month: 'long', year: 'numeric' });
 
           const serviceList = (srv?.pekerjaan || b.jenis_servis || "Servis Umum").split(",").map((x: string) => x.trim()).filter((x: string) => x);
+
+          const depositPayment = b.payments?.find((p: any) => p.metode === 'dp' && p.status === 'pending');
 
           return {
             rawBookingId: b.id,
@@ -110,10 +135,11 @@ export default function ServiceHistoryPage() {
             car: b.vehicles ? `${b.vehicles.merk} ${b.vehicles.tipe}` : "Kendaraan Dihapus",
             date: formattedDate,
             services: serviceList.length > 0 ? serviceList : ["Servis Umum"],
-            total: srv?.total || 0,
+            total: srv?.total || b.estimasi_total || 0,
             branch: "Auto Craft Pusat",
             technician: srv?.mekanik || b.mekanik || "-",
-            progress
+            progress,
+            depositPayment
           };
         });
         setHistory(mapped);
@@ -148,8 +174,30 @@ export default function ServiceHistoryPage() {
     }
   };
 
+  const [isPaying, setIsPaying] = useState<string | null>(null);
+
+  const handlePayDeposit = async (paymentId: string) => {
+    setIsPaying(paymentId);
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ status: 'success' })
+        .eq('id', paymentId);
+      
+      if (error) throw new Error(error.message);
+      
+      alert('Pembayaran deposit berhasil disimulasikan!');
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsPaying(null);
+    }
+  };
+
   const filteredHistory = history.filter(h => {
-    if (activeTab === "Menunggu") return h.status.includes("Menunggu");
+    if (activeTab === "Menunggu") return h.status.includes("Menunggu") || h.status === "Menunggu Kedatangan";
+    if (activeTab === "Di Bengkel") return h.status.includes("Di Bengkel");
     return h.status === activeTab;
   });
 
@@ -221,7 +269,7 @@ export default function ServiceHistoryPage() {
             
             {/* Tabs */}
             <div className="flex gap-4 border-b border-white/10 mb-8 overflow-x-auto pb-1 scrollbar-none">
-              {["Menunggu", "Proses", "Selesai"].map((tab) => (
+              {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -229,7 +277,7 @@ export default function ServiceHistoryPage() {
                     activeTab === tab ? "border-[#E07A5F] text-[#E07A5F]" : "border-transparent text-white/50 hover:text-white"
                   }`}
                 >
-                  {tab === "Selesai" ? tab : `Sedang ${tab}`}
+                  {tab}
                 </button>
               ))}
             </div>
@@ -274,7 +322,7 @@ export default function ServiceHistoryPage() {
                       <div className="space-y-1">
                         <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">Layanan Dikerjakan:</span>
                         <ul className="text-sm text-white/80 list-disc list-inside">
-                          {item.services.map((srv, i) => <li key={i}>{srv}</li>)}
+                          {item.services.map((srv: string, i: number) => <li key={i}>{srv}</li>)}
                         </ul>
                       </div>
                       
@@ -291,9 +339,9 @@ export default function ServiceHistoryPage() {
                       </div>
                       
                       <div className="w-full">
-                        {item.status.includes("Menunggu") && (
+                        {item.status === "Menunggu Konfirmasi" && (
                           <div className="space-y-2 text-center">
-                            <span className="text-[#E07A5F] font-bold text-sm mb-2 block border border-[#E07A5F]/30 bg-[#E07A5F]/10 py-2 rounded-xl">
+                            <span className="text-orange-400 font-bold text-sm mb-2 block border border-orange-500/30 bg-orange-500/10 py-2 rounded-xl">
                               {item.status}
                             </span>
                             <button 
@@ -303,6 +351,49 @@ export default function ServiceHistoryPage() {
                             >
                               {isCancelling === item.rawBookingId ? "Membatalkan..." : "Batalkan"}
                             </button>
+                          </div>
+                        )}
+
+                        {item.status === "Menunggu Kedatangan" && (
+                          <div className="space-y-2 text-center">
+                            {item.depositPayment ? (
+                              <div className="mb-3">
+                                <div className="text-left bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-2 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 rounded-bl-full -z-10"></div>
+                                  <p className="text-yellow-500 font-bold text-xs uppercase tracking-wider">Tagihan Deposit (30%)</p>
+                                  <p className="text-xl font-black text-white my-1">Rp {item.depositPayment.total.toLocaleString("id-ID")}</p>
+                                  <p className="text-yellow-500/70 text-[10px]">Bayar sebelum {new Date(new Date(item.depositPayment.created_at).getTime() + 86400000).toLocaleString("id-ID", { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} WIB</p>
+                                </div>
+                                <button 
+                                  onClick={() => handlePayDeposit(item.depositPayment.id)}
+                                  disabled={isPaying === item.depositPayment.id}
+                                  className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 px-4 rounded-xl transition text-sm shadow-lg shadow-[#E07A5F]/20 disabled:opacity-50 mb-2 flex items-center justify-center gap-2"
+                                >
+                                  {isPaying === item.depositPayment.id ? "Memproses..." : "Bayar Deposit Sekarang"}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[#E07A5F] font-bold text-sm mb-2 block border border-[#E07A5F]/30 bg-[#E07A5F]/10 py-2 rounded-xl">
+                                {item.status}
+                              </span>
+                            )}
+                            
+                            <button 
+                              onClick={() => handleCancelBooking(item.rawBookingId, item.rawServiceId)}
+                              disabled={isCancelling === item.rawBookingId}
+                              className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20 disabled:opacity-50"
+                            >
+                              {isCancelling === item.rawBookingId ? "Membatalkan..." : "Batalkan"}
+                            </button>
+                          </div>
+                        )}
+                        
+                        {item.status === "Di Bengkel (Menunggu Antrean)" && (
+                          <div className="space-y-2 text-center">
+                            <span className="text-emerald-400 font-bold text-sm mb-2 block border border-emerald-500/30 bg-emerald-500/10 py-2 rounded-xl">
+                              Di Bengkel (Antrean)
+                            </span>
+                            <p className="text-[10px] text-white/50">Tidak bisa dibatalkan dari aplikasi.</p>
                           </div>
                         )}
                         

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wrench, Plus, Trash2, CheckCircle2, FileText, Search, Calendar } from "lucide-react";
+import { Wrench, Plus, Trash2, CheckCircle2, FileText, Search, Calendar, Play } from "lucide-react";
 import dayjs from "dayjs";
 
 type Service = {
@@ -26,7 +26,7 @@ export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("proses");
+  const [filterStatus, setFilterStatus] = useState("aktif");
   
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -58,7 +58,8 @@ export default function ServicesPage() {
         *,
         users (nama, nomor_hp, nomor_pelanggan),
         vehicles (merk, tipe, nomor_polisi),
-        bookings (tanggal)
+        bookings (tanggal),
+        payments (total, status)
       `)
       .order("created_at", { ascending: true }); // Mengubah ke ASC untuk urutan antrean yang benar (FIFO)
 
@@ -73,12 +74,26 @@ export default function ServicesPage() {
       s.users?.nama?.toLowerCase().includes(searchLower) ||
       s.vehicles?.nomor_polisi?.toLowerCase().includes(searchLower);
       
-    const matchesStatus = filterStatus === "all" || s.status === filterStatus;
+    const matchesStatus = filterStatus === "all" || 
+      (filterStatus === "aktif" ? (s.status === "menunggu" || s.status === "proses") : s.status === filterStatus);
     
     return matchesSearch && matchesStatus;
   });
 
   // LOGIKA ANTREAN (MAX 4 BAY)
+  // Sort menunggu antrean: prioritaskan jadwal hari ini/terdahulu, baru jadwal masa depan
+  const menungguServices = filteredServices
+    .filter(s => s.status === "menunggu")
+    .sort((a, b) => {
+      const dateA = a.bookings?.tanggal ? dayjs(a.bookings.tanggal).startOf('day').valueOf() : dayjs(a.created_at).startOf('day').valueOf();
+      const dateB = b.bookings?.tanggal ? dayjs(b.bookings.tanggal).startOf('day').valueOf() : dayjs(b.created_at).startOf('day').valueOf();
+      
+      if (dateA !== dateB) {
+        return dateA - dateB; // Tanggal lebih awal prioritas utama
+      }
+      return dayjs(a.created_at).valueOf() - dayjs(b.created_at).valueOf(); // Jika tanggal sama, prioritas yang check-in duluan (FIFO)
+    });
+    
   const prosesServices = filteredServices.filter(s => s.status === "proses");
   
   // Pisahkan berdasarkan tanggal
@@ -95,14 +110,33 @@ export default function ServicesPage() {
   const activeBays = todayAndPastServices.slice(0, 4);
   const waitingQueue = todayAndPastServices.slice(4);
   
-  // Untuk status selain 'proses' (misal selesai/dibatalkan), tampilkan semua
-  const otherServices = filteredServices.filter(s => s.status !== "proses");
+  // Untuk status selain 'proses' dan 'menunggu' (misal selesai/dibatalkan), tampilkan semua
+  const otherServices = filteredServices.filter(s => s.status !== "proses" && s.status !== "menunggu");
 
   const openEditModal = (service: Service) => {
     setSelectedService(service);
     setSpareparts(service.sparepart || []);
     setJasas(service.jasa || []);
     setIsEditModalOpen(true);
+  };
+
+  // Mulai Servis: Pindahkan dari 'menunggu' ke 'proses' (masuk Bay)
+  const handleStartService = async (service: Service) => {
+    if (activeBays.length >= 4) {
+      alert("Semua Bay (4/4) sedang terisi! Tunggu sampai ada Bay yang kosong.");
+      return;
+    }
+    
+    const { error } = await supabase
+      .from("services")
+      .update({ status: "proses" })
+      .eq("id", service.id);
+    
+    if (error) {
+      alert("Gagal memulai servis: " + error.message);
+    } else {
+      fetchServices();
+    }
   };
 
   const addSparepart = () => {
@@ -261,10 +295,12 @@ export default function ServicesPage() {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-[#E07A5F] focus:outline-none transition min-w-[150px]"
         >
-          <option value="all">Semua Status</option>
-          <option value="proses">Dalam Antrean / Proses</option>
-          <option value="selesai">Selesai</option>
-          <option value="dibatalkan">Dibatalkan</option>
+          <option className="bg-[#121212] text-white" value="all">Semua Status</option>
+          <option className="bg-[#121212] text-white" value="aktif">Aktif (Menunggu + Proses)</option>
+          <option className="bg-[#121212] text-white" value="menunggu">Menunggu Antrean</option>
+          <option className="bg-[#121212] text-white" value="proses">Sedang Dikerjakan</option>
+          <option className="bg-[#121212] text-white" value="selesai">Selesai</option>
+          <option className="bg-[#121212] text-white" value="dibatalkan">Dibatalkan</option>
         </select>
       </div>
 
@@ -272,8 +308,8 @@ export default function ServicesPage() {
         <div className="text-center py-20 text-white/50">Memuat data servis...</div>
       ) : (
         <div className="space-y-10">
-          {/* TAMPILAN JIKA FILTER = PROSES (Atau All yang memiliki proses) */}
-          {(filterStatus === "proses" || filterStatus === "all") && (
+          {/* TAMPILAN JIKA FILTER = AKTIF / PROSES / MENUNGGU */}
+          {(filterStatus === "aktif" || filterStatus === "proses" || filterStatus === "menunggu" || filterStatus === "all") && (
             <>
               {/* 4 BAY UTAMA */}
               <div>
@@ -372,6 +408,41 @@ export default function ServicesPage() {
                   </div>
                 )}
               </div>
+
+              {/* MENUNGGU CHECK-IN (Baru dari Check-In, belum masuk Bay) */}
+              {menungguServices.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-3 mb-4 mt-8">
+                    <h2 className="text-xl font-bold text-white/70">Menunggu Antrean (Sudah Check-In)</h2>
+                    <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30">
+                      {menungguServices.length} Kendaraan
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {menungguServices.map((service) => (
+                      <div key={service.id} className="bg-[#121212] border border-yellow-500/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400">
+                            <Calendar className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-white/50 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleStartService(service)}
+                          disabled={activeBays.length >= 4}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-5 rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Play className="w-3 h-3" /> Mulai Servis
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* JADWAL MENDATANG (Future Services) */}
               {futureServices.length > 0 && (
@@ -638,31 +709,72 @@ export default function ServicesPage() {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-white/10 flex gap-3 justify-end bg-black/20 mt-auto">
-                <button 
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  Tutup
-                </button>
+              <div className="p-6 border-t border-white/10 bg-black/20 mt-auto">
                 {selectedService.status !== 'selesai' && (
-                  <>
-                    <button 
-                      onClick={() => handleSave(false)}
-                      disabled={saving}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors disabled:opacity-50"
-                    >
-                      {saving ? "Menyimpan..." : "Simpan Draft"}
-                    </button>
-                    <button 
-                      onClick={() => handleSave(true)}
-                      disabled={saving}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-500 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <CheckCircle2 className="w-4 h-4" /> Selesai & Buat Tagihan
-                    </button>
-                  </>
+                  <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                    <h4 className="text-blue-400 font-bold mb-2">Preview Tagihan</h4>
+                    <div className="space-y-1 text-sm text-white/80">
+                      <div className="flex justify-between">
+                        <span>Total Akhir Servis:</span>
+                        <span className="font-mono">Rp {calculateTotal().toLocaleString('id-ID')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Deposit / Sudah Dibayar:</span>
+                        <span className="font-mono text-green-400">
+                          - Rp {(() => {
+                            const payments = (selectedService as any).payments || [];
+                            const totalDibayar = payments
+                              .filter((p: any) => p.status !== 'gagal' && p.status !== 'refund')
+                              .reduce((sum: number, p: any) => sum + Number(p.total), 0);
+                            return totalDibayar.toLocaleString('id-ID');
+                          })()}
+                        </span>
+                      </div>
+                      <div className="h-px bg-white/10 my-2" />
+                      <div className="flex justify-between font-bold text-white">
+                        <span>Sisa Tagihan Customer:</span>
+                        <span className="text-[#E07A5F]">
+                          Rp {(() => {
+                            const total = calculateTotal();
+                            const payments = (selectedService as any).payments || [];
+                            const totalDibayar = payments
+                              .filter((p: any) => p.status !== 'gagal' && p.status !== 'refund')
+                              .reduce((sum: number, p: any) => sum + Number(p.total), 0);
+                            const sisa = total - totalDibayar;
+                            return sisa > 0 ? sisa.toLocaleString('id-ID') : '0 (Lunas)';
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 )}
+                
+                <div className="flex gap-3 justify-end">
+                  <button 
+                    onClick={() => setIsEditModalOpen(false)}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  >
+                    Tutup
+                  </button>
+                  {selectedService.status !== 'selesai' && (
+                    <>
+                      <button 
+                        onClick={() => handleSave(false)}
+                        disabled={saving}
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors disabled:opacity-50"
+                      >
+                        {saving ? "Menyimpan..." : "Simpan Draft"}
+                      </button>
+                      <button 
+                        onClick={() => handleSave(true)}
+                        disabled={saving}
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-500 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Selesai & Buat Tagihan
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>

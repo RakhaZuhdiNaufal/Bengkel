@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -32,9 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const adminClient = createAdminClient();
-
-    const { data: bookingCheck } = await adminClient
+    const { data: bookingCheck } = await supabaseClient
       .from("bookings")
       .select("user_id")
       .eq("id", booking_id)
@@ -44,11 +41,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    await adminClient.from("bookings").update({ status: 'batal' }).eq('id', booking_id);
+    await supabaseClient.from("bookings").update({ status: 'batal' }).eq('id', booking_id);
+
+    // Cancel related payment
+    await supabaseClient.from("payments").update({ status: 'dibatalkan' }).eq('booking_id', booking_id);
 
     if (service_id) {
-      await adminClient.from("services").update({ status: 'dibatalkan' }).eq('id', service_id);
-      await adminClient.from("payments").update({ status: 'dibatalkan' }).eq('service_id', service_id);
+      await supabaseClient.from("services").update({ status: 'dibatalkan' }).eq('id', service_id);
     }
 
     return NextResponse.json({ success: true });
