@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, CheckCircle, Search, FileSignature } from "lucide-react";
+import dayjs from "dayjs";
+import "dayjs/locale/id";
+
+dayjs.locale("id");
 
 type Payment = {
   id: string;
@@ -11,9 +15,11 @@ type Payment = {
   total: number;
   metode: string;
   status: string;
+  created_at: string;
   paid_at: string;
   users: { nama: string; nomor_hp: string };
-  services: { pekerjaan: string; sparepart: any[]; jasa: any[] };
+  services: { pekerjaan: string; sparepart: any[]; jasa: any[]; vehicles?: { merk: string; tipe: string; nomor_polisi: string } };
+  bookings: { vehicles?: { merk: string; tipe: string; nomor_polisi: string } };
 };
 
 export default function PaymentsPage() {
@@ -40,7 +46,8 @@ export default function PaymentsPage() {
       .select(`
         *,
         users (nama, nomor_hp),
-        services (pekerjaan, sparepart, jasa)
+        services (pekerjaan, sparepart, jasa, vehicles (merk, tipe, nomor_polisi)),
+        bookings (vehicles (merk, tipe, nomor_polisi))
       `)
       .order("created_at", { ascending: false });
 
@@ -50,9 +57,11 @@ export default function PaymentsPage() {
 
   const filteredPayments = payments.filter((p) => {
     const searchLower = search.toLowerCase();
+    const vehicle = p.bookings?.vehicles || p.services?.vehicles;
     const matchesSearch = 
       p.nomor_invoice?.toLowerCase().includes(searchLower) ||
-      p.users?.nama?.toLowerCase().includes(searchLower);
+      p.users?.nama?.toLowerCase().includes(searchLower) ||
+      vehicle?.nomor_polisi?.toLowerCase().includes(searchLower);
       
     const matchesStatus = filterStatus === "all" || p.status === filterStatus;
     
@@ -100,7 +109,7 @@ export default function PaymentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Kasir & Pembayaran</h1>
-          <p className="text-white/60 mt-1">Selesaikan tagihan pelanggan untuk servis yang sudah berstatus Selesai.</p>
+          <p className="text-white/60 mt-1">Selesaikan tagihan pelanggan dan cetak struk servis.</p>
         </div>
       </div>
 
@@ -110,7 +119,7 @@ export default function PaymentsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
           <input 
             type="text" 
-            placeholder="Cari invoice atau nama pelanggan..."
+            placeholder="Cari invoice, nama, atau plat nomor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors"
@@ -134,7 +143,7 @@ export default function PaymentsPage() {
             <thead className="bg-black/50 text-white/60 font-semibold border-b border-white/10">
               <tr>
                 <th className="px-6 py-4">Nomor Invoice</th>
-                <th className="px-6 py-4">Pelanggan</th>
+                <th className="px-6 py-4">Pelanggan & Kendaraan</th>
                 <th className="px-6 py-4">Rincian Servis</th>
                 <th className="px-6 py-4 text-right">Total Tagihan</th>
                 <th className="px-6 py-4 text-center">Status</th>
@@ -151,21 +160,34 @@ export default function PaymentsPage() {
                   <td colSpan={6} className="px-6 py-12 text-center text-white/40">Tidak ada data tagihan.</td>
                 </tr>
               ) : (
-                filteredPayments.map((payment) => (
+                filteredPayments.map((payment) => {
+                  const vehicle = payment.bookings?.vehicles || payment.services?.vehicles;
+                  
+                  return (
                   <tr key={payment.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-mono text-[#E07A5F] font-bold flex items-center gap-2">
                         {payment.nomor_invoice}
                         {payment.metode === 'dp' && <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded uppercase tracking-wider">DP</span>}
                       </div>
+                      <div className="text-xs text-white/40 mt-1">{dayjs(payment.created_at).format('DD MMM YYYY')}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-semibold text-white">{payment.users?.nama}</div>
-                      <div className="text-white/60 text-xs">{payment.users?.nomor_hp || "-"}</div>
+                      <div className="text-white/60 text-xs mb-1">{payment.users?.nomor_hp || "-"}</div>
+                      {vehicle && (
+                        <div className="inline-flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded text-xs border border-white/5">
+                          <span className="text-white/80">{vehicle.merk} {vehicle.tipe}</span>
+                          <span className="text-[#E07A5F] font-bold">{vehicle.nomor_polisi}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="line-clamp-1">{payment.services?.pekerjaan || "Servis Reguler"}</div>
-                      <div className="text-xs text-white/40">
+                      <div className="font-semibold text-white/90">
+                        {payment.metode === 'dp' ? '(Tagihan Uang Muka / Deposit)' : '(Pelunasan Servis)'}
+                      </div>
+                      <div className="line-clamp-1 text-white/70 mt-0.5">{payment.services?.pekerjaan || "Servis Reguler"}</div>
+                      <div className="text-xs text-white/40 mt-0.5">
                         {payment.services?.sparepart?.length || 0} item, {payment.services?.jasa?.length || 0} jasa
                       </div>
                     </td>
@@ -192,16 +214,16 @@ export default function PaymentsPage() {
                         </button>
                       ) : (
                         <button 
-                          onClick={() => window.open(`/payments/invoice/${payment.id}`, '_blank')}
-                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white transition-colors" 
+                          onClick={() => window.open(`/print/${payment.id}`, '_blank')}
+                          className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold text-xs transition-colors whitespace-nowrap inline-flex items-center gap-2" 
                           title="Cetak Struk"
                         >
-                          <FileSignature className="w-4 h-4" />
+                          <FileSignature className="w-3.5 h-3.5" /> Cetak Struk
                         </button>
                       )}
                     </td>
                   </tr>
-                ))
+                )})
               )}
             </tbody>
           </table>

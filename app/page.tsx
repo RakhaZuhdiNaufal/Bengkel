@@ -245,10 +245,10 @@ export default function Home() {
             {/* TOMBOL MASUK / AKUN DENGAN ROUTING DINAMIS */}
             <div className="flex items-center gap-4">
               <Link
-                href={user ? "/akun" : "/login"}
+                href={user ? "/home" : "/login"}
                 className="bg-[#E07A5F] hover:bg-[#d0694e] text-white text-sm font-bold px-7 py-2 rounded-full transition-all transform active:scale-95 shadow-lg shadow-[#E07A5F]/20 flex items-center justify-center"
               >
-                {user ? "Akun Saya" : "Masuk"}
+                {user ? "Beranda" : "Masuk"}
               </Link>
             </div>
           </div>

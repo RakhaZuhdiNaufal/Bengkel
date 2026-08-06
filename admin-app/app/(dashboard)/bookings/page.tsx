@@ -22,6 +22,7 @@ type Booking = {
   service_items: any[];
   users: { nama: string; nomor_hp: string; nomor_pelanggan: string };
   vehicles: { merk: string; tipe: string; nomor_polisi: string };
+  payments?: { status: string; total: number }[];
 };
 
 export default function BookingsPage() {
@@ -62,7 +63,8 @@ export default function BookingsPage() {
       .select(`
         *,
         users (nama, nomor_hp, nomor_pelanggan),
-        vehicles (merk, tipe, nomor_polisi)
+        vehicles (merk, tipe, nomor_polisi),
+        payments (status, total)
       `)
       .order("tanggal", { ascending: true });
 
@@ -470,6 +472,20 @@ export default function BookingsPage() {
                                   className="w-full py-3 rounded-xl text-sm font-bold text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 border border-red-500/20 disabled:opacity-50"
                                 >
                                   <XCircle className="w-4 h-4" /> Tandai Tidak Hadir (Batal)
+                                </button>
+                              );
+                            }
+
+                            // CEK STATUS DEPOSIT
+                            const hasPendingDeposit = booking.payments?.some(p => p.status === 'pending' && p.total > 0);
+
+                            if (hasPendingDeposit) {
+                              return (
+                                <button 
+                                  disabled
+                                  className="w-full py-3 rounded-xl text-sm font-bold text-white/50 bg-white/5 transition-colors flex items-center justify-center gap-2 border border-white/10 cursor-not-allowed"
+                                >
+                                  <LogIn className="w-4 h-4" /> Menunggu Pembayaran Deposit
                                 </button>
                               );
                             }

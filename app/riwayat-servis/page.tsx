@@ -181,7 +181,7 @@ export default function ServiceHistoryPage() {
     try {
       const { error } = await supabase
         .from('payments')
-        .update({ status: 'success' })
+        .update({ status: 'lunas' })
         .eq('id', paymentId);
       
       if (error) throw new Error(error.message);
