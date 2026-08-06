@@ -13,6 +13,7 @@ export default function ServiceHistoryPage() {
   const supabase = createClient();
   const [activeTab, setActiveTab] = useState("Menunggu");
   const [isCancelling, setIsCancelling] = useState<string | null>(null);
+  const [popup, setPopup] = useState<{show: boolean, type: 'success' | 'error', message: string, reloadOnClose?: boolean}>({ show: false, type: 'success', message: '' });
   
   const tabs = ["Menunggu", "Di Bengkel", "Proses", "Terjadwal", "Selesai", "Batal"];
   
@@ -137,7 +138,6 @@ export default function ServiceHistoryPage() {
             services: serviceList.length > 0 ? serviceList : ["Servis Umum"],
             total: srv?.total || b.estimasi_total || 0,
             branch: "Auto Craft Pusat",
-            technician: srv?.mekanik || b.mekanik || "-",
             progress,
             depositPayment
           };
@@ -164,11 +164,10 @@ export default function ServiceHistoryPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal membatalkan pesanan");
       
-      alert("Booking berhasil dibatalkan.");
       // Refresh page to show updated status
-      window.location.reload();
+      setPopup({ show: true, type: 'success', message: 'Booking berhasil dibatalkan.', reloadOnClose: true });
     } catch (err: any) {
-      alert(err.message);
+      setPopup({ show: true, type: 'error', message: err.message });
     } finally {
       setIsCancelling(null);
     }
@@ -186,10 +185,9 @@ export default function ServiceHistoryPage() {
       
       if (error) throw new Error(error.message);
       
-      alert('Pembayaran deposit berhasil disimulasikan!');
-      window.location.reload();
+      setPopup({ show: true, type: 'success', message: 'Pembayaran deposit berhasil disimulasikan!', reloadOnClose: true });
     } catch (err: any) {
-      alert(err.message);
+      setPopup({ show: true, type: 'error', message: err.message });
     } finally {
       setIsPaying(null);
     }
@@ -202,7 +200,41 @@ export default function ServiceHistoryPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-[#F4F1DE] font-sans selection:bg-[#E07A5F]/30 pb-24">
+    <div className="min-h-screen bg-black text-[#F4F1DE] flex flex-col font-sans relative">
+      {/* Custom Popup Modal */}
+      {popup.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#1A1A1A] border border-white/10 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl"
+          >
+            <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${popup.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+              {popup.type === 'success' ? (
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">{popup.type === 'success' ? 'Berhasil!' : 'Terjadi Kesalahan'}</h3>
+            <p className="text-white/60 mb-6">{popup.message}</p>
+            <button 
+              onClick={() => {
+                if (popup.reloadOnClose) window.location.reload();
+                else setPopup({ ...popup, show: false });
+              }}
+              className="w-full py-3 bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold rounded-xl transition"
+            >
+              Tutup
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="bg-[#121212]/90 backdrop-blur-md border-b border-white/10 px-6 py-4 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -324,10 +356,6 @@ export default function ServiceHistoryPage() {
                         <ul className="text-sm text-white/80 list-disc list-inside">
                           {item.services.map((srv: string, i: number) => <li key={i}>{srv}</li>)}
                         </ul>
-                      </div>
-                      
-                      <div className="text-xs text-white/50 flex items-center gap-2">
-                        <User className="w-3 h-3" /> Teknisi: <span className="text-white font-medium">{item.technician}</span>
                       </div>
                     </div>
 

@@ -16,7 +16,7 @@ type Payment = {
   status: string;
   paid_at: string;
   users: { nama: string; nomor_hp: string };
-  services: { pekerjaan: string; sparepart: any[]; jasa: any[], mekanik: string };
+  services: { pekerjaan: string; sparepart: any[]; jasa: any[] };
   vehicles: { merk: string; tipe: string; nomor_polisi: string };
 };
 
@@ -37,7 +37,7 @@ export default function InvoicePrintPage() {
       .select(`
         *,
         users (nama, nomor_hp),
-        services (pekerjaan, sparepart, jasa, mekanik, vehicles (merk, tipe, nomor_polisi))
+        services (pekerjaan, sparepart, jasa, vehicles (merk, tipe, nomor_polisi))
       `)
       .eq("id", id)
       .single();
@@ -89,9 +89,6 @@ export default function InvoicePrintPage() {
             <span>Kendaraan:</span>
             <span className="text-right">{payment.vehicles?.nomor_polisi || "-"}</span>
           </div>
-          <div className="flex justify-between">
-            <span>Mekanik:</span>
-            <span className="text-right truncate ml-2">{payment.services?.mekanik || "-"}</span>
           </div>
         </div>
 

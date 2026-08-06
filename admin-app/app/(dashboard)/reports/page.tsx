@@ -12,9 +12,8 @@ dayjs.locale("id");
 type ReportData = {
   totalPendapatan: number;
   totalModalSparepart: number;
-  totalBagiHasil: number;
+  totalBagiHasil?: number; // legacy
   labaBersih: number;
-  mechanicShares: Record<string, number>;
   transactions: any[];
 };
 
@@ -22,9 +21,7 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportData>({
     totalPendapatan: 0,
     totalModalSparepart: 0,
-    totalBagiHasil: 0,
     labaBersih: 0,
-    mechanicShares: {},
     transactions: []
   });
   const [loading, setLoading] = useState(true);
@@ -44,7 +41,7 @@ export default function ReportsPage() {
       .select(`
         *,
         users (nama),
-        services (mekanik, sparepart, jasa, total)
+        services (sparepart, jasa, total)
       `)
       .eq("status", "lunas")
       .order("paid_at", { ascending: false });
@@ -56,8 +53,6 @@ export default function ReportsPage() {
 
     let pendapatan = 0;
     let modalSparepart = 0;
-    let bagiHasil = 0;
-    const mechanics: Record<string, number> = {};
 
     payments.forEach((p) => {
       pendapatan += Number(p.total);
@@ -67,30 +62,12 @@ export default function ReportsPage() {
       spareparts.forEach((item: any) => {
         modalSparepart += (Number(item.harga_modal || 0) * Number(item.qty || 1));
       });
-
-      // Hitung Bagi Hasil Mekanik
-      const jasas = p.services?.jasa || [];
-      const mekanikName = p.services?.mekanik || "Tanpa Nama";
-      
-      let shareMekanikTransaksiIni = 0;
-      jasas.forEach((jasaItem: any) => {
-        const persentase = Number(jasaItem.persentase_mekanik || 40) / 100;
-        const komisi = Number(jasaItem.harga || 0) * persentase;
-        shareMekanikTransaksiIni += komisi;
-      });
-
-      bagiHasil += shareMekanikTransaksiIni;
-
-      if (!mechanics[mekanikName]) mechanics[mekanikName] = 0;
-      mechanics[mekanikName] += shareMekanikTransaksiIni;
     });
 
     setData({
       totalPendapatan: pendapatan,
       totalModalSparepart: modalSparepart,
-      totalBagiHasil: bagiHasil,
-      labaBersih: pendapatan - modalSparepart - bagiHasil,
-      mechanicShares: mechanics,
+      labaBersih: pendapatan - modalSparepart,
       transactions: payments
     });
 
@@ -110,7 +87,7 @@ export default function ReportsPage() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Laporan Keuangan</h1>
-          <p className="text-white/60 mt-1">Analitik pendapatan, laba bersih, dan bagi hasil mekanik.</p>
+          <p className="text-white/60 mt-1">Analitik pendapatan dan laba bersih.</p>
         </div>
         <button className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold">
           <BarChart3 className="w-4 h-4" /> Cetak Laporan
@@ -118,7 +95,7 @@ export default function ReportsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all" />
           <div className="flex items-center gap-3 mb-4 text-blue-400">
@@ -141,17 +118,6 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        <div className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl relative overflow-hidden group">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-all" />
-          <div className="flex items-center gap-3 mb-4 text-[#E07A5F]">
-            <div className="p-2 bg-[#E07A5F]/20 rounded-lg"><Users className="w-5 h-5" /></div>
-            <h3 className="font-semibold">Bagi Hasil Mekanik</h3>
-          </div>
-          <div className="text-3xl font-black text-white whitespace-nowrap">
-            - Rp {data.totalBagiHasil.toLocaleString("id-ID")}
-          </div>
-        </div>
-
         <div className="bg-[#1A1A1A] border border-green-500/30 p-6 rounded-2xl relative overflow-hidden group">
           <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all" />
           <div className="flex items-center gap-3 mb-4 text-green-400">
@@ -164,33 +130,9 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Rekap Mekanik */}
-        <div className="lg:col-span-1 bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-white/10">
-            <h3 className="font-bold text-lg text-white">Komisi Mekanik</h3>
-            <p className="text-sm text-white/40 mt-1">Berdasarkan persentase (40% / 60%)</p>
-          </div>
-          <div className="p-6 flex-1 overflow-y-auto">
-            {Object.keys(data.mechanicShares).length === 0 ? (
-              <div className="text-center text-white/40 text-sm">Belum ada data komisi.</div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(data.mechanicShares)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([name, amount]) => (
-                  <div key={name} className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5">
-                    <div className="font-semibold text-white">{name}</div>
-                    <div className="font-bold text-[#E07A5F]">Rp {amount.toLocaleString("id-ID")}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6">
         {/* Riwayat Transaksi */}
-        <div className="lg:col-span-2 bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
+        <div className="bg-[#1A1A1A] border border-white/10 rounded-2xl overflow-hidden flex flex-col">
           <div className="p-6 border-b border-white/10">
             <h3 className="font-bold text-lg text-white">Riwayat Transaksi Terakhir</h3>
           </div>

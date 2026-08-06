@@ -14,7 +14,6 @@ type Booking = {
   tanggal: string;
   jenis_servis: string;
   keluhan: string;
-  mekanik: string;
   status: string;
   catatan: string;
   created_at: string;
@@ -46,9 +45,14 @@ export default function BookingsPage() {
   const [walkinKeluhan, setWalkinKeluhan] = useState("");
   
   const [newStatus, setNewStatus] = useState("");
-  const [newMekanik, setNewMekanik] = useState("");
   const [newCatatan, setNewCatatan] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ show: false, title: "", message: "", onConfirm: () => {} });
 
   const supabase = createClient();
 
@@ -97,7 +101,6 @@ export default function BookingsPage() {
   const openProcessModal = (booking: Booking, targetStatus: string) => {
     setSelectedBooking(booking);
     setNewStatus(targetStatus);
-    setNewMekanik(booking.mekanik || "");
     setNewCatatan(booking.catatan || "");
     setIsProcessModalOpen(true);
   };
@@ -112,7 +115,6 @@ export default function BookingsPage() {
       .from("bookings")
       .update({ 
         status: newStatus,
-        mekanik: newMekanik,
         catatan: newCatatan
       })
       .eq("id", selectedBooking.id);
@@ -150,13 +152,21 @@ export default function BookingsPage() {
   };
 
   // === CHECK-IN: Gerbang Utama Pembuatan Work Order ===
-  const handleCheckIn = async (booking: Booking, isEarly: boolean = false) => {
+  const handleCheckIn = (booking: Booking, isEarly: boolean = false) => {
     const confirmMsg = isEarly 
       ? `⚠️ DROP-OFF AWAL ⚠️\nPesanan ini dijadwalkan untuk hari ke depan, tapi akan di Check-In HARI INI.\n\nCustomer: ${booking.users?.nama}\nKendaraan: ${booking.vehicles?.merk} ${booking.vehicles?.tipe}\n\nYakin pelanggan menitipkan mobilnya lebih awal?` 
       : `Check-In customer ${booking.users?.nama}?\nKendaraan: ${booking.vehicles?.merk} ${booking.vehicles?.tipe} (${booking.vehicles?.nomor_polisi})\n\nIni akan membuat Work Order dan memasukkan kendaraan ke antrean servis.`;
       
-    if (!confirm(confirmMsg)) return;
-    
+    setConfirmModal({
+      show: true,
+      title: isEarly ? 'Konfirmasi Drop-Off Awal' : 'Konfirmasi Check-In',
+      message: confirmMsg,
+      onConfirm: () => executeCheckIn(booking)
+    });
+  };
+
+  const executeCheckIn = async (booking: Booking) => {
+    setConfirmModal(prev => ({ ...prev, show: false }));
     setSaving(true);
     
     // 1. Update booking status ke checked_in
@@ -182,7 +192,6 @@ export default function BookingsPage() {
         booking_id: booking.id,
         user_id: (booking as any).user_id,
         vehicle_id: (booking as any).vehicle_id,
-        mekanik: booking.mekanik,
         keluhan: booking.keluhan,
         pekerjaan: booking.jenis_servis,
         total: estimasiTotal,
@@ -322,7 +331,38 @@ export default function BookingsPage() {
   };
 
   return (
-    <motion.div 
+    <>
+      <AnimatePresence>
+        {confirmModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#1A1A1A] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-white mb-2">{confirmModal.title}</h3>
+              <p className="text-white/70 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{confirmModal.message}</p>
+              <div className="flex gap-3 justify-end">
+                <button 
+                  onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={confirmModal.onConfirm}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
+                >
+                  Ya, Lanjutkan
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
@@ -462,11 +502,17 @@ export default function BookingsPage() {
                             if (bookingDateStr < todayStr) {
                               return (
                                 <button 
-                                  onClick={async () => {
-                                    if(confirm("Pelanggan ini tidak datang (No-Show). Yakin ingin membatalkan pesanan ini?")) {
-                                      await supabase.from("bookings").update({status: 'batal'}).eq('id', booking.id);
-                                      fetchBookings();
-                                    }
+                                  onClick={() => {
+                                    setConfirmModal({
+                                      show: true,
+                                      title: 'Konfirmasi No-Show',
+                                      message: 'Pelanggan ini tidak datang (No-Show). Yakin ingin membatalkan pesanan ini?',
+                                      onConfirm: async () => {
+                                        setConfirmModal(prev => ({ ...prev, show: false }));
+                                        await supabase.from("bookings").update({status: 'batal'}).eq('id', booking.id);
+                                        fetchBookings();
+                                      }
+                                    });
                                   }}
                                   disabled={saving}
                                   className="w-full py-3 rounded-xl text-sm font-bold text-red-500 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 border border-red-500/20 disabled:opacity-50"
@@ -575,20 +621,6 @@ export default function BookingsPage() {
               </div>
               
               <form onSubmit={handleProcessBooking} className="p-6 space-y-4">
-                {newStatus === 'diterima' && (
-                  <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-2 uppercase">
-                      Tugaskan Mekanik
-                    </label>
-                    <input 
-                      type="text"
-                      placeholder="Nama mekanik (Bisa diisi nanti)"
-                      value={newMekanik}
-                      onChange={(e) => setNewMekanik(e.target.value)}
-                      className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-green-500 transition-colors"
-                    />
-                  </div>
-                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-white/80 mb-2 uppercase">
@@ -778,5 +810,6 @@ export default function BookingsPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </>
   );
 }

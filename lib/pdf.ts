@@ -58,7 +58,6 @@ export function downloadInvoicePdf(data: InvoiceData) {
   const finalY = (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
     ?.finalY ?? 120;
 
-  doc.text(`Teknisi: ${data.service.mekanik ?? "—"}`, 14, finalY + 12);
   doc.text(`Status: ${data.payment?.status ?? data.service.status}`, 14, finalY + 18);
   doc.setFontSize(13);
   doc.text(`Total: ${formatCurrency(Number(data.service.total))}`, 14, finalY + 28);

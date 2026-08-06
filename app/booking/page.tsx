@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -15,7 +16,6 @@ interface BookingData {
   vehicleYear: string;
   vehiclePlate: string;
   branch: string;
-  technician: string;
   selectedServices: string[];
   date: string;
   time: string;
@@ -23,13 +23,6 @@ interface BookingData {
 }
 
 
-
-const technicians = [
-  { id: "any", name: "Siapa Saja (Tersedia Pertama)" },
-  { id: "budi", name: "Budi (Master Mechanic)" },
-  { id: "ahmad", name: "Ahmad (Engine Specialist)" },
-  { id: "reza", name: "Reza (Detailing Expert)" },
-];
 
 export default function BookingPage() {
   const router = useRouter();
@@ -43,7 +36,6 @@ export default function BookingPage() {
     vehicleYear: "",
     vehiclePlate: "",
     branch: "",
-    technician: "any",
     selectedServices: [],
     date: "",
     time: "",
@@ -77,7 +69,7 @@ export default function BookingPage() {
 
   const selectedBrandObj = vehicles.find((v) => v.brand === data.vehicleBrand);
 
-  const handleNext = () => setStep((p) => Math.min(p + 1, 6));
+  const handleNext = () => setStep((p) => Math.min(p + 1, 5));
   const handlePrev = () => setStep((p) => Math.max(p - 1, 1));
 
   const toggleService = (id: string) => {
@@ -133,7 +125,7 @@ export default function BookingPage() {
         return total + (srv ? srv.price : 0);
       }, 0);
 
-      // 2. Buat Booking (tanpa membuat Service/Work Order â€” itu tugas Admin saat Check-In)
+      // 2. Buat Booking (tanpa membuat Service/Work Order — itu tugas Admin saat Check-In)
       const combinedServices = data.selectedServices.map(id => services.find(s => s.id === id)?.name).join(", ");
       const serviceItemsJson = data.selectedServices.map(id => {
         const srv = services.find(s => s.id === id);
@@ -148,7 +140,7 @@ export default function BookingPage() {
           tanggal: data.date + " " + data.time,
           jenis_servis: combinedServices,
           keluhan: data.notes,
-          mekanik: data.technician !== "any" ? technicians.find(t => t.id === data.technician)?.name : null,
+          mekanik: null,
           status: "menunggu",
           service_items: serviceItemsJson,
           estimasi_total: computedTotal
@@ -194,7 +186,7 @@ export default function BookingPage() {
             Pesanan Anda sedang ditinjau oleh bengkel. Kami akan mengonfirmasi ketersediaan jadwal dan mengirimkan tagihan deposit setelah pesanan diterima.
           </p>
           <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3 mb-8">
-            <p className="text-orange-400 text-sm font-semibold">â³ Status: Menunggu Konfirmasi Bengkel</p>
+            <p className="text-orange-400 text-sm font-semibold">🕒 Status: Menunggu Konfirmasi Bengkel</p>
             <p className="text-orange-400/70 text-xs mt-1">Anda tidak perlu membayar apa pun saat ini.</p>
           </div>
           <button 
@@ -222,14 +214,14 @@ export default function BookingPage() {
           
           {/* Progress Bar */}
           <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto">
-            {[1, 2, 3, 4, 5, 6].map((num) => (
+            {[1, 2, 3, 4, 5].map((num) => (
               <div key={num} className="flex items-center">
                 <div className={`w-5 h-5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold transition-colors ${
                   step >= num ? "bg-[#E07A5F] text-white" : "bg-[#1A1A1A] text-white/40 border border-white/10"
                 }`}>
                   {num}
                 </div>
-                {num < 6 && (
+                {num < 5 && (
                   <div className={`w-2 sm:w-4 h-[1px] mx-1 sm:mx-1 ${step > num ? "bg-[#E07A5F]" : "bg-white/10"}`} />
                 )}
               </div>
@@ -378,44 +370,9 @@ export default function BookingPage() {
               </motion.div>
             )}
 
-            {/* STEP 3: Teknisi */}
+            {/* STEP 3: Servis */}
             {step === 3 && (
               <motion.div key="step3" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                <div className="mb-8">
-                  <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-[#E07A5F] mb-4">
-                    <User className="w-6 h-6" />
-                  </div>
-                  <h2 className="text-3xl font-extrabold text-white">Pilih Teknisi</h2>
-                  <p className="text-white/60 text-sm mt-2">Ingin ditangani oleh mekanik langganan Anda? Pilih di bawah ini.</p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {technicians.map((t) => (
-                    <div 
-                      key={t.id}
-                      onClick={() => setData({ ...data, technician: t.id })}
-                      className={`p-5 rounded-2xl border-2 cursor-pointer transition flex flex-col gap-3 ${
-                        data.technician === t.id ? "border-[#E07A5F] bg-[#E07A5F]/10" : "border-white/5 bg-[#1A1A1A] hover:border-white/20"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white/50">
-                          <User className="w-5 h-5" />
-                        </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${data.technician === t.id ? "border-[#E07A5F]" : "border-white/20"}`}>
-                          {data.technician === t.id && <div className="w-2.5 h-2.5 bg-[#E07A5F] rounded-full" />}
-                        </div>
-                      </div>
-                      <span className={`font-bold ${data.technician === t.id ? "text-white" : "text-white/70"}`}>{t.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 4: Servis */}
-            {step === 4 && (
-              <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="mb-8">
                   <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-[#E07A5F] mb-4">
                     <Wrench className="w-6 h-6" />
@@ -449,9 +406,9 @@ export default function BookingPage() {
               </motion.div>
             )}
 
-            {/* STEP 5: Jadwal */}
-            {step === 5 && (
-              <motion.div key="step5" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+            {/* STEP 4: Jadwal */}
+            {step === 4 && (
+              <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="mb-8">
                   <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-[#E07A5F] mb-4">
                     <Calendar className="w-6 h-6" />
@@ -499,9 +456,9 @@ export default function BookingPage() {
               </motion.div>
             )}
 
-            {/* STEP 6: Konfirmasi */}
-            {step === 6 && (
-              <motion.div key="step6" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+            {/* STEP 5: Konfirmasi */}
+            {step === 5 && (
+              <motion.div key="step5" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="mb-8">
                   <h2 className="text-3xl font-extrabold text-white">Ringkasan Booking</h2>
                   <p className="text-white/60 text-sm mt-2">Pastikan semua data sudah benar sebelum mengonfirmasi.</p>
@@ -527,7 +484,7 @@ export default function BookingPage() {
                         const srv = services.find(s => s.id === srvId);
                         return (
                           <li key={srvId} className="flex justify-between items-center text-sm">
-                            <span className="text-white/80">â€¢ {srv?.name}</span>
+                            <span className="text-white/80">• {srv?.name}</span>
                             <span className="font-bold text-white">Rp {srv?.price.toLocaleString("id-ID")}</span>
                           </li>
                         )
@@ -556,15 +513,14 @@ export default function BookingPage() {
               <ChevronLeft className="w-4 h-4" /> Kembali
             </button>
 
-            {step < 6 ? (
+            {step < 5 ? (
               <button
                 onClick={handleNext}
                 disabled={
                   (step === 1 && (!data.vehicleBrand || !data.vehicleModel || !data.vehicleYear || !data.vehiclePlate)) ||
                   (step === 2 && !data.branch) ||
-                  (step === 3 && !data.technician) ||
-                  (step === 4 && data.selectedServices.length === 0) ||
-                  (step === 5 && (!data.date || !data.time))
+                  (step === 3 && data.selectedServices.length === 0) ||
+                  (step === 4 && (!data.date || !data.time))
                 }
                 className="flex items-center gap-2 bg-[#E07A5F] hover:bg-[#d0694e] text-white px-8 py-3 rounded-xl font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
               >

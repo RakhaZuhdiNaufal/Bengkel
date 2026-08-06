@@ -10,8 +10,7 @@ type Service = {
   id: string;
   nomor_invoice: string;
   tanggal: string;
-  mekanik: string;
-  keluhan: string;
+  keluhan?: string;
   pekerjaan: string;
   status: string;
   sparepart: any[];
@@ -170,7 +169,7 @@ export default function ServicesPage() {
   };
 
   const addJasa = () => {
-    setJasas([...jasas, { nama: "", harga: 0, persentase_mekanik: 40 }]);
+    setJasas([...jasas, { nama: "", harga: 0 }]);
   };
 
   const updateJasa = (index: number, field: string, value: any) => {
@@ -352,10 +351,6 @@ export default function ServicesPage() {
                           <div className="flex justify-between border-b border-white/5 pb-2">
                             <span className="text-white/50">Pekerjaan</span>
                             <span className="text-white text-right max-w-[200px] truncate">{service.pekerjaan}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-white/50">Mekanik</span>
-                            <span className="text-white">{service.mekanik || "-"}</span>
                           </div>
                         </div>
                         
@@ -648,7 +643,7 @@ export default function ServicesPage() {
                 {/* Jasa / Layanan */}
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-lg text-white">Biaya Jasa & Bagi Hasil Mekanik</h3>
+                    <h3 className="font-semibold text-lg text-white">Biaya Jasa</h3>
                     {selectedService.status !== 'selesai' && (
                       <button 
                         onClick={addJasa}
@@ -681,18 +676,6 @@ export default function ServicesPage() {
                               disabled={selectedService.status === 'selesai'}
                               className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
                             />
-                          </div>
-                          <div className="w-full sm:w-48">
-                            <label className="block text-xs text-white/40 mb-1">Bagi Hasil Mekanik</label>
-                            <select 
-                              value={item.persentase_mekanik || 40} 
-                              onChange={(e) => updateJasa(index, "persentase_mekanik", Number(e.target.value))}
-                              disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 cursor-pointer"
-                            >
-                              <option value={40}>Pekerjaan Ringan/Sedang (40%)</option>
-                              <option value={60}>Pekerjaan Berat (60%)</option>
-                            </select>
                           </div>
                           {selectedService.status !== 'selesai' && (
                             <button 
