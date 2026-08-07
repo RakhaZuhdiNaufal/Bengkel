@@ -10,6 +10,7 @@ type Service = {
   id: string;
   nomor_invoice: string;
   tanggal: string;
+  created_at: string;
   keluhan?: string;
   pekerjaan: string;
   status: string;

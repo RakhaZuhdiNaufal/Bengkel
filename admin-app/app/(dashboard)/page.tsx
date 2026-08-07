@@ -15,7 +15,8 @@ export default function AdminDashboard() {
   const [totalCustomers, setTotalCustomers] = useState(0);
   
   // Finance Metrics
-  const [revenueToday, setRevenueToday] = useState(0);
+  const [revenueDisetor, setRevenueDisetor] = useState(0);
+  const [revenueBelumDisetor, setRevenueBelumDisetor] = useState(0);
   const [pendingPayments, setPendingPayments] = useState(0);
   
   // Schedule & Bay
@@ -52,13 +53,21 @@ export default function AdminDashboard() {
       // 3. Fetch Finance
       const { data: paymentsToday } = await supabase
         .from("payments")
-        .select("total, status")
+        .select("total, status, is_setor")
         .gte("created_at", startOfDay)
         .lte("created_at", endOfDay);
 
       if (paymentsToday) {
-        const sumRevenue = paymentsToday.filter(p => p.status === 'lunas').reduce((acc, curr) => acc + curr.total, 0);
-        setRevenueToday(sumRevenue);
+        let setor = 0;
+        let belumSetor = 0;
+        paymentsToday.forEach(p => {
+          if (p.status === 'lunas') {
+            if (p.is_setor) setor += p.total;
+            else belumSetor += p.total;
+          }
+        });
+        setRevenueDisetor(setor);
+        setRevenueBelumDisetor(belumSetor);
       }
 
       const { count: pendingPayCount } = await supabase
@@ -119,24 +128,37 @@ export default function AdminDashboard() {
 
       {/* METRIK KEUANGAN & UTAMA */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A1A1A] border border-[#E07A5F]/20 p-6 rounded-2xl shadow-lg">
+        
+        {/* Pendapatan Bersih (Tersimpan) */}
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A1A1A] border border-green-500/20 p-6 rounded-2xl shadow-lg">
           <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-white/80">Pendapatan Hari Ini</h3>
+            <h3 className="font-semibold text-white/80">Pendapatan (Disetor)</h3>
+            <Wallet className="text-green-400 w-5 h-5" />
+          </div>
+          <div className="text-3xl font-black text-white">Rp {revenueDisetor.toLocaleString('id-ID')}</div>
+          <p className="text-green-400 text-xs mt-2 font-medium flex items-center gap-1">
+            <CheckCircle className="w-3 h-3" /> Masuk ke rekening bos
+          </p>
+        </div>
+
+        {/* Uang di Kasir (Belum Disetor) */}
+        <div className="bg-[#1A1A1A] border border-[#E07A5F]/20 p-6 rounded-2xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#E07A5F]"></div>
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="font-semibold text-white/80">Uang di Laci Kasir</h3>
             <Wallet className="text-[#E07A5F] w-5 h-5" />
           </div>
-          <div className="text-3xl font-black text-white">Rp {revenueToday.toLocaleString('id-ID')}</div>
-          <p className="text-green-400 text-xs mt-2 font-medium flex items-center gap-1">
-            <CheckCircle className="w-3 h-3" /> Transaksi lunas
-          </p>
+          <div className="text-3xl font-black text-[#E07A5F]">Rp {revenueBelumDisetor.toLocaleString('id-ID')}</div>
+          <p className="text-white/40 text-xs mt-2 font-medium">Belum ditutup/disetorkan kasir</p>
         </div>
 
         <div className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl">
           <div className="flex justify-between items-start mb-2">
-            <h3 className="font-semibold text-white/80">Menunggu Pembayaran</h3>
+            <h3 className="font-semibold text-white/80">Tagihan Gantung</h3>
             <Banknote className="text-red-400 w-5 h-5" />
           </div>
           <div className="text-3xl font-black text-white">{pendingPayments} <span className="text-lg font-normal text-white/40">Tagihan</span></div>
-          <p className="text-red-400/80 text-xs mt-2 font-medium">Pelanggan belum melunasi kasir</p>
+          <p className="text-red-400/80 text-xs mt-2 font-medium">Pelanggan belum melunasi</p>
         </div>
         
         <div className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl">

@@ -29,8 +29,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?redirect=/settings");
-    if (!loading && isStaff) router.replace("/admin/settings");
-  }, [loading, user, isStaff, router]);
+    if (!loading && profile && (profile.role === 'admin' || profile.role === 'kasir')) router.replace("/admin/settings");
+  }, [loading, user, profile, router]);
 
   useEffect(() => {
     if (!profile) return;

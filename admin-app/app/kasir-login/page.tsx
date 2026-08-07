@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminLogin() {
+export default function KasirLogin() {
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -22,7 +22,7 @@ export default function AdminLogin() {
     });
 
     if (error) {
-      setErrorMsg(error.message);
+      setErrorMsg("Kredensial tidak valid.");
       setLoading(false);
       return;
     }
@@ -36,14 +36,11 @@ export default function AdminLogin() {
         .eq("id", userId)
         .single();
 
-      if (profile && profile.role === "admin") {
-        window.location.href = "/";
-      } else if (profile && profile.role === "kasir") {
-        await supabase.auth.signOut();
-        setErrorMsg("Anda login sebagai Kasir. Silakan login melalui Portal Kasir (/kasir-login).");
+      if (profile && profile.role === "kasir") {
+        window.location.href = "/dashboard"; // Ini akan mengarah ke (kasir)/dashboard
       } else {
         await supabase.auth.signOut();
-        setErrorMsg("Akses ditolak. Anda bukan Admin.");
+        setErrorMsg("Akses ditolak. Anda bukan kasir.");
       }
     } else {
       setErrorMsg("Gagal memuat profil akun.");
@@ -54,14 +51,17 @@ export default function AdminLogin() {
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex font-sans">
       {/* Sisi Kiri: Panel Dekoratif Lebih Kecil/Proporsional */}
-      <div className="hidden lg:flex lg:w-[42%] bg-[#E07A5F] relative overflow-hidden items-center justify-center p-10">
-        <div className="relative z-10 max-w-md space-y-5 text-black">
+      <div className="hidden lg:flex lg:w-[42%] bg-[#121212] border-r border-white/5 relative overflow-hidden items-center justify-center p-10">
+        <div className="relative z-10 max-w-md space-y-5 text-center">
+          <div className="w-20 h-20 bg-[#E07A5F] rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_40px_rgba(224,122,95,0.3)]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17V7"/></svg>
+          </div>
+          <h1 className="text-3xl font-black text-white">Kasir Portal</h1>
+          <p className="text-white/50 text-sm">Sistem Pembayaran Terpadu Auto Craft.</p>
         </div>
-
-        <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-black/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Sisi Kanan: Form Login (Dominan Hitam & Lebih Luas) */}
+      {/* Sisi Kanan: Form Login */}
       <div className="w-full lg:w-[58%] flex items-center justify-center p-6 sm:p-12 relative bg-black">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -74,10 +74,10 @@ export default function AdminLogin() {
               AUTO CRAFT
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Admin Panel
+              Akses Kasir
             </h2>
             <p className="text-xs text-white/60">
-              Masukkan kredensial khusus staf untuk masuk ke dashboard.
+              Silakan masukkan kredensial kasir Anda untuk memulai shift.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function AdminLogin() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@autocraft.com"
+                placeholder="kasir@autocraft.com"
                 className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition placeholder:text-white/30 shadow-inner"
                 required
               />
@@ -118,9 +118,9 @@ export default function AdminLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] disabled:bg-[#E07A5F]/50 disabled:cursor-not-allowed text-white font-bold text-sm py-4 rounded-xl transition shadow-lg shadow-[#E07A5F]/20 active:scale-[0.98] mt-2 cursor-pointer flex justify-center items-center"
+              className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-black font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(224,122,95,0.2)] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
-              {loading ? "Memproses..." : "Masuk ke Panel Admin"}
+              {loading ? "Memverifikasi..." : "Mulai Sesi Kasir"}
             </button>
           </form>
         </motion.div>

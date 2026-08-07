@@ -19,9 +19,7 @@ const navItems = [
   { name: "Pengguna", href: "/users", icon: Users },
   { name: "Pesanan", href: "/bookings", icon: CalendarCheck },
   { name: "Servis", href: "/services", icon: Wrench },
-  { name: "Kasir", href: "/payments", icon: WalletCards },
   { name: "Stok Barang", href: "/inventory", icon: Package },
-
   { name: "Laporan", href: "/reports", icon: LayoutDashboard },
 ];
 

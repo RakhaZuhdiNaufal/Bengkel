@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Package, AlertTriangle, PlusCircle } from "lucide-react";
+import { Search, Plus, Trash2, Package, AlertTriangle, PlusCircle, TrendingUp } from "lucide-react";
 
 type Sparepart = {
   id: string;
@@ -17,10 +17,12 @@ type Sparepart = {
   stok: number;
   satuan: string;
   kompatibilitas: string[];
+  last_restocked_at?: string;
 };
 
 export default function InventoryPage() {
   const [spareparts, setSpareparts] = useState<Sparepart[]>([]);
+  const [topSelling, setTopSelling] = useState<{nama: string, qty: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   
@@ -53,12 +55,35 @@ export default function InventoryPage() {
 
   const fetchInventory = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("spareparts")
-      .select("*")
-      .order("nama", { ascending: true });
+    const [sparepartsRes, paymentsRes] = await Promise.all([
+      supabase.from("spareparts").select("*").order("nama", { ascending: true }),
+      supabase.from("payments").select("services (sparepart)").eq("status", "lunas")
+    ]);
 
-    if (data) setSpareparts(data);
+    if (sparepartsRes.data) setSpareparts(sparepartsRes.data);
+    
+    if (paymentsRes.data) {
+      const usage: Record<string, number> = {};
+      paymentsRes.data.forEach((p: any) => {
+        const servicesArr = Array.isArray(p.services) ? p.services : [p.services];
+        servicesArr.forEach((s: any) => {
+          const parts = s?.sparepart || [];
+          parts.forEach((part: any) => {
+            if (part.nama) {
+              usage[part.nama] = (usage[part.nama] || 0) + (Number(part.qty) || 1);
+            }
+          });
+        });
+      });
+      
+      const sortedUsage = Object.entries(usage)
+        .map(([nama, qty]) => ({ nama, qty }))
+        .sort((a, b) => b.qty - a.qty)
+        .slice(0, 5);
+        
+      setTopSelling(sortedUsage);
+    }
+    
     setLoading(false);
   };
 
@@ -111,7 +136,10 @@ export default function InventoryPage() {
     const amount = Number(restockAmount);
     if (amount > 0) {
       const newStock = restockingItem.stok + amount;
-      await supabase.from("spareparts").update({ stok: newStock }).eq("id", restockingItem.id);
+      await supabase.from("spareparts").update({ 
+        stok: newStock,
+        last_restocked_at: new Date().toISOString()
+      }).eq("id", restockingItem.id);
       fetchInventory();
     }
     
@@ -172,6 +200,69 @@ export default function InventoryPage() {
         >
           <Plus className="w-4 h-4" /> <span>Tambah Barang</span>
         </button>
+      </div>
+
+      {/* Laporan Stok Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Low Stock */}
+        <div className="bg-[#1A1A1A] border border-red-500/20 p-5 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+          <h3 className="text-white/60 text-sm font-semibold mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-400" /> Barang Mau Habis
+          </h3>
+          <div className="space-y-3 max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+            {spareparts.filter(s => s.stok <= 5).length === 0 ? (
+              <p className="text-white/40 text-xs">Semua stok aman.</p>
+            ) : (
+              spareparts.filter(s => s.stok <= 5).map(s => (
+                <div key={s.id} className="flex justify-between items-center text-sm">
+                  <span className="text-white truncate pr-2">{s.nama}</span>
+                  <span className="text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded text-xs">{s.stok} left</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Recently Restocked */}
+        <div className="bg-[#1A1A1A] border border-blue-500/20 p-5 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+          <h3 className="text-white/60 text-sm font-semibold mb-3 flex items-center gap-2">
+            <Package className="w-4 h-4 text-blue-400" /> Baru Di-restock
+          </h3>
+          <div className="space-y-3 max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+            {spareparts.filter(s => s.last_restocked_at).sort((a, b) => new Date(b.last_restocked_at!).getTime() - new Date(a.last_restocked_at!).getTime()).slice(0, 5).length === 0 ? (
+              <p className="text-white/40 text-xs">Belum ada aktivitas restock.</p>
+            ) : (
+              spareparts.filter(s => s.last_restocked_at).sort((a, b) => new Date(b.last_restocked_at!).getTime() - new Date(a.last_restocked_at!).getTime()).slice(0, 5).map(s => (
+                <div key={s.id} className="flex flex-col text-sm">
+                  <span className="text-white truncate">{s.nama}</span>
+                  <span className="text-blue-400/80 text-[10px] mt-0.5">{new Date(s.last_restocked_at!).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Top Selling */}
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A1A1A] border border-[#E07A5F]/20 p-5 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-[#E07A5F]"></div>
+          <h3 className="text-white/60 text-sm font-semibold mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-[#E07A5F]" /> Paling Banyak Digunakan
+          </h3>
+          <div className="space-y-3 max-h-[120px] overflow-y-auto custom-scrollbar pr-2">
+            {topSelling.length === 0 ? (
+              <p className="text-white/40 text-xs">Belum ada data penjualan.</p>
+            ) : (
+              topSelling.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <span className="text-white truncate pr-2">{item.nama}</span>
+                  <span className="text-[#E07A5F] font-bold text-xs">{item.qty}x dipakai</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Search */}
