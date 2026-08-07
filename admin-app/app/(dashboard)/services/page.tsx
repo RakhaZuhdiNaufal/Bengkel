@@ -583,7 +583,7 @@ export default function ServicesPage() {
                               <option value="">-- Ketik manual atau pilih --</option>
                               {inventory.map(inv => (
                                 <option key={inv.id} value={inv.nama}>
-                                  {inv.nama} (Stok: {inv.stok})
+                                  {inv.sku ? `[${inv.sku}] ` : ""}{inv.merk ? `${inv.merk} - ` : ""}{inv.nama} (Stok: {inv.stok} {inv.satuan || 'Pcs'})
                                 </option>
                               ))}
                             </select>

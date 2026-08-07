@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, profile, loading, signOut, refreshProfile, isStaff } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const supabase = useMemo(() => createClient(), []);
 
   const [phone, setPhone] = useState("");

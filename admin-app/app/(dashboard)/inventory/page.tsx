@@ -3,15 +3,20 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Plus, Trash2, Package, AlertTriangle } from "lucide-react";
+import { Search, Plus, Trash2, Package, AlertTriangle, PlusCircle } from "lucide-react";
 
 type Sparepart = {
   id: string;
+  sku: string | null;
   nama: string;
   kategori: string;
+  merk: string | null;
+  tipe_model: string | null;
   harga_modal: number;
   harga_jual: number;
   stok: number;
+  satuan: string;
+  kompatibilitas: string[];
 };
 
 export default function InventoryPage() {
@@ -22,12 +27,22 @@ export default function InventoryPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Sparepart | null>(null);
   
+  // Restock State
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [restockingItem, setRestockingItem] = useState<Sparepart | null>(null);
+  const [restockAmount, setRestockAmount] = useState("");
+
   // Form State
+  const [sku, setSku] = useState("");
   const [nama, setNama] = useState("");
   const [kategori, setKategori] = useState("");
+  const [merk, setMerk] = useState("");
+  const [tipeModel, setTipeModel] = useState("");
   const [hargaModal, setHargaModal] = useState("");
   const [hargaJual, setHargaJual] = useState("");
   const [stok, setStok] = useState("");
+  const [satuan, setSatuan] = useState("Pcs");
+  const [kompatibilitas, setKompatibilitas] = useState("");
   const [saving, setSaving] = useState(false);
 
   const supabase = createClient();
@@ -54,22 +69,54 @@ export default function InventoryPage() {
 
   const openAddModal = () => {
     setEditingItem(null);
+    setSku("");
     setNama("");
     setKategori("");
+    setMerk("");
+    setTipeModel("");
     setHargaModal("");
     setHargaJual("");
     setStok("");
+    setSatuan("Pcs");
+    setKompatibilitas("");
     setIsModalOpen(true);
   };
 
   const openEditModal = (item: Sparepart) => {
     setEditingItem(item);
+    setSku(item.sku || "");
     setNama(item.nama);
     setKategori(item.kategori || "");
+    setMerk(item.merk || "");
+    setTipeModel(item.tipe_model || "");
     setHargaModal(item.harga_modal.toString());
     setHargaJual(item.harga_jual.toString());
     setStok(item.stok.toString());
+    setSatuan(item.satuan || "Pcs");
+    setKompatibilitas((item.kompatibilitas || []).join(", "));
     setIsModalOpen(true);
+  };
+
+  const openRestockModal = (item: Sparepart) => {
+    setRestockingItem(item);
+    setRestockAmount("");
+    setIsRestockModalOpen(true);
+  };
+
+  const handleRestockSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!restockingItem) return;
+    setSaving(true);
+    
+    const amount = Number(restockAmount);
+    if (amount > 0) {
+      const newStock = restockingItem.stok + amount;
+      await supabase.from("spareparts").update({ stok: newStock }).eq("id", restockingItem.id);
+      fetchInventory();
+    }
+    
+    setIsRestockModalOpen(false);
+    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -83,12 +130,18 @@ export default function InventoryPage() {
     e.preventDefault();
     setSaving(true);
     
+    const kompArray = kompatibilitas.split(",").map(k => k.trim()).filter(k => k !== "");
     const payload = {
+      sku: sku || null,
       nama,
       kategori,
+      merk: merk || null,
+      tipe_model: tipeModel || null,
       harga_modal: Number(hargaModal),
       harga_jual: Number(hargaJual),
-      stok: Number(stok)
+      stok: Number(stok),
+      satuan: satuan || "Pcs",
+      kompatibilitas: kompArray
     };
 
     if (editingItem) {
@@ -163,9 +216,13 @@ export default function InventoryPage() {
                       <div className="font-semibold text-white flex items-center gap-2">
                         <Package className="w-4 h-4 text-[#E07A5F]" /> {item.nama}
                       </div>
+                      {(item.merk || item.tipe_model) && (
+                        <div className="text-xs text-white/50 mt-1 ml-6">{item.merk} {item.tipe_model}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-1 bg-white/5 rounded-full text-xs">{item.kategori || "Umum"}</span>
+                      {item.sku && <div className="text-[10px] text-white/40 mt-1 ml-1">{item.sku}</div>}
                     </td>
                     <td className="px-6 py-4 text-right font-mono text-white/60">
                       Rp {item.harga_modal.toLocaleString("id-ID")}
@@ -182,13 +239,22 @@ export default function InventoryPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        onClick={() => handleDelete(item.id)}
-                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                        title="Hapus Barang"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          onClick={() => openRestockModal(item)}
+                          className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Restock Barang"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="Hapus Barang"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -215,18 +281,40 @@ export default function InventoryPage() {
                 <h2 className="text-xl font-bold text-white">{editingItem ? "Edit Barang" : "Tambah Barang Baru"}</h2>
               </div>
               
-              <form onSubmit={handleSave} className="p-6 space-y-4">
+              <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/80 mb-2">SKU (Opsional)</label>
+                    <input type="text" value={sku} onChange={(e) => setSku(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/80 mb-2">Kategori (Wajib)</label>
+                    <input type="text" required value={kategori} onChange={(e) => setKategori(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                    />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-white/80 mb-2">Nama Barang</label>
                   <input type="text" required value={nama} onChange={(e) => setNama(e.target.value)}
                     className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-2">Kategori (Opsional)</label>
-                  <input type="text" value={kategori} onChange={(e) => setKategori(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-white/80 mb-2">Merk (Opsional)</label>
+                    <input type="text" value={merk} onChange={(e) => setMerk(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-white/80 mb-2">Tipe/Model (Opsional)</label>
+                    <input type="text" value={tipeModel} onChange={(e) => setTipeModel(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -255,6 +343,49 @@ export default function InventoryPage() {
                   <button type="submit" disabled={saving}
                     className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#E07A5F] hover:bg-[#d0694e] text-white disabled:opacity-50"
                   >{saving ? "Menyimpan..." : "Simpan"}</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Modal Restock */}
+        {isRestockModalOpen && restockingItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsRestockModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-sm bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-white/10 bg-[#1A1A1A]">
+                <h2 className="text-xl font-bold text-white">Restock Barang</h2>
+                <p className="text-sm text-white/50 mt-1">{restockingItem.nama}</p>
+              </div>
+              
+              <form onSubmit={handleRestockSave} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-white/80 mb-2">Stok Masuk (Stok saat ini: {restockingItem.stok})</label>
+                  <input type="number" required min="1" value={restockAmount} onChange={(e) => setRestockAmount(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                    placeholder="Contoh: 10"
+                  />
+                </div>
+                
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setIsRestockModalOpen(false)} disabled={saving}
+                    className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button type="submit" disabled={saving}
+                    className="flex-1 px-4 py-3 rounded-xl bg-[#E07A5F] hover:bg-[#d0694e] text-white font-semibold shadow-lg transition-colors"
+                  >
+                    {saving ? "Menyimpan..." : "Simpan Stok"}
+                  </button>
                 </div>
               </form>
             </motion.div>
