@@ -21,7 +21,7 @@ export default function AdminDashboard() {
   // Schedule & Bay
   const [todaySchedules, setTodaySchedules] = useState<any[]>([]);
   const [bayUsed, setBayUsed] = useState(0);
-  const BAY_CAPACITY = 6;
+  const BAY_CAPACITY = 4;
 
   const supabase = createClient();
 
@@ -82,12 +82,22 @@ export default function AdminDashboard() {
       if (schedules) setTodaySchedules(schedules);
 
       // 5. Fetch Bay Utilization
-      const { count: bayCount } = await supabase
+      const { data: bayData } = await supabase
         .from("services")
-        .select("*", { count: "exact", head: true })
+        .select("id, bookings(tanggal)")
         .eq("status", "proses");
         
-      if (bayCount !== null) setBayUsed(bayCount);
+      if (bayData) {
+        let activeCount = 0;
+        const now = new Date();
+        now.setHours(23, 59, 59, 999);
+        bayData.forEach((s: any) => {
+          if (!s.bookings?.tanggal || new Date(s.bookings.tanggal) <= now) {
+            activeCount++;
+          }
+        });
+        setBayUsed(Math.min(activeCount, BAY_CAPACITY));
+      }
 
       setLoading(false);
     }
