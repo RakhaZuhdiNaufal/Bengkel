@@ -21,6 +21,8 @@ import {
   Download,
   Wrench,
   Award,
+  User,
+  MapPin
 } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar } from "@/components/ui/Avatar";
@@ -31,6 +33,7 @@ import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { downloadInvoicePdf } from "@/lib/pdf";
+import dayjs from "dayjs";
 import type {
   Booking,
   BookingStatus,
@@ -39,7 +42,7 @@ import type {
   Vehicle,
 } from "@/lib/types/database";
 
-type Tab = "profil" | "kendaraan" | "servis" | "pembayaran" | "booking";
+type MainTab = "dashboard" | "profil" | "pembayaran";
 
 const emptyVehicle = {
   merk: "",
@@ -54,19 +57,26 @@ export default function AkunPage() {
   const { user, profile, loading, signOut } = useAuth();
   const supabase = useMemo(() => createClient(), []);
 
-  const [tab, setTab] = useState<Tab>("profil");
-  const [mobileNav, setMobileNav] = useState(false);
+  // Tabs & Navigation
+  const [mainTab, setMainTab] = useState<MainTab>("dashboard");
+  const [subTab, setSubTab] = useState("Menunggu");
+  const subTabs = ["Menunggu", "Di Bengkel", "Proses", "Terjadwal", "Selesai", "Batal"];
+
+  // Form State
   const [phone, setPhone] = useState("");
   const [editingPhone, setEditingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // Data State
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [services, setServices] = useState<ServiceRecord[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [historyCards, setHistoryCards] = useState<any[]>([]);
 
+  // Modals
   const [vehicleModal, setVehicleModal] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [vehicleForm, setVehicleForm] = useState(emptyVehicle);
@@ -82,6 +92,13 @@ export default function AkunPage() {
 
   const [serviceDetail, setServiceDetail] = useState<ServiceRecord | null>(null);
 
+  // New UI Modals
+  const [popup, setPopup] = useState<{show: boolean, type: 'success' | 'error', message: string, reloadOnClose?: boolean}>({ show: false, type: 'success', message: '' });
+  const [paymentModal, setPaymentModal] = useState<{show: boolean, paymentId: string | null, total: number}>({show: false, paymentId: null, total: 0});
+  const [selectedMethod, setSelectedMethod] = useState("");
+  const [isCancelling, setIsCancelling] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && !user) router.replace("/login?redirect=/akun");
   }, [loading, user, router]);
@@ -92,33 +109,76 @@ export default function AkunPage() {
 
   const loadAll = useCallback(async () => {
     if (!user) return;
-    const [v, s, p, b] = await Promise.all([
+    const [v, s, p, b, allProses] = await Promise.all([
       supabase.from("vehicles").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-      supabase
-        .from("services")
-        .select("*, vehicles(id,merk,tipe,nomor_polisi,warna,tahun)")
-        .eq("user_id", user.id)
-        .order("tanggal", { ascending: false }),
-      supabase
-        .from("payments")
-        .select("*, services(id,nomor_invoice,tanggal,pekerjaan)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("bookings")
-        .select("*, vehicles(id,merk,tipe,nomor_polisi,warna,tahun)")
-        .eq("user_id", user.id)
-        .order("tanggal", { ascending: false }),
+      supabase.from("services").select("*, vehicles(id,merk,tipe,nomor_polisi,warna,tahun)").eq("user_id", user.id).order("tanggal", { ascending: false }),
+      supabase.from("payments").select("*, services(id,nomor_invoice,tanggal,pekerjaan)").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("bookings").select("*, vehicles(*), services(*), payments(*)").eq("user_id", user.id).order("tanggal", { ascending: false }),
+      supabase.from("services").select("id, bookings(tanggal)").eq("status", "proses").order("created_at", { ascending: true })
     ]);
+    
     setVehicles((v.data as Vehicle[]) ?? []);
     setServices((s.data as ServiceRecord[]) ?? []);
     setPayments((p.data as Payment[]) ?? []);
-    setBookings((b.data as Booking[]) ?? []);
+    
+    const bookingsData = b.data as any[] || [];
+    setBookings(bookingsData);
+
+    const activeQueueIds = (allProses.data || [])
+      .filter((s: any) => !s.bookings?.tanggal || dayjs(s.bookings.tanggal).isBefore(dayjs().endOf('day')))
+      .map((s: any) => s.id);
+
+    const mapped = bookingsData.map((b: any) => {
+      const srv = b.services && b.services.length > 0 ? b.services[0] : null;
+      let statusLabel = "Menunggu";
+      let progress = 0;
+      
+      if (srv) {
+        if (srv.status === 'selesai') { statusLabel = "Selesai"; progress = 100; } 
+        else if (srv.status === 'dibatalkan') { statusLabel = "Batal"; progress = 0; } 
+        else if (srv.status === 'menunggu') { statusLabel = "Di Bengkel (Menunggu Antrean)"; progress = 30; } 
+        else if (srv.status === 'proses') {
+          if (dayjs(b.tanggal).isAfter(dayjs().endOf('day'))) {
+            statusLabel = "Terjadwal"; progress = 20;
+          } else {
+            const index = activeQueueIds.indexOf(srv.id);
+            if (index !== -1 && index < 4) { statusLabel = "Proses"; progress = 50; } 
+            else if (index >= 4) { statusLabel = `Menunggu Antrean (Ke-${index - 3})`; progress = 0; } 
+            else { statusLabel = "Proses"; progress = 50; }
+          }
+        }
+      } else {
+        if (b.status === 'batal' || b.status === 'dibatalkan') { statusLabel = "Batal"; } 
+        else if (b.status === 'checked_in') { statusLabel = "Di Bengkel (Menunggu Antrean)"; progress = 30; } 
+        else if (b.status === 'diterima') { statusLabel = "Menunggu Kedatangan"; progress = 10; } 
+        else if (b.status === 'menunggu') { statusLabel = "Menunggu Konfirmasi"; progress = 5; } 
+        else if (b.status === 'ditolak') { statusLabel = "Ditolak"; }
+      }
+
+      const dateObj = new Date(b.tanggal);
+      const formattedDate = dateObj.toLocaleDateString("id-ID", { day: '2-digit', month: 'long', year: 'numeric' });
+      const serviceList = (srv?.pekerjaan || b.jenis_servis || "Servis Umum").split(",").map((x: string) => x.trim()).filter((x: string) => x);
+      const depositPayment = b.payments?.find((p: any) => p.metode === 'dp' && p.status === 'pending');
+
+      return {
+        rawBookingId: b.id,
+        rawServiceId: srv?.id,
+        id: srv?.nomor_invoice || `BKG-${b.id.substring(0,8).toUpperCase()}`,
+        status: statusLabel,
+        car: b.vehicles ? `${b.vehicles.merk} ${b.vehicles.tipe}` : "Kendaraan Dihapus",
+        plate: b.vehicles?.nomor_polisi || "-",
+        date: formattedDate,
+        services: serviceList.length > 0 ? serviceList : ["Servis Umum"],
+        total: srv?.total || b.estimasi_total || 0,
+        branch: "Auto Craft Pusat",
+        progress,
+        depositPayment
+      };
+    });
+    setHistoryCards(mapped);
   }, [supabase, user]);
 
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   useEffect(() => {
     if (!user) return;
@@ -129,25 +189,16 @@ export default function AkunPage() {
       .on("postgres_changes", { event: "*", schema: "public", table: "services", filter: `user_id=eq.${user.id}` }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `user_id=eq.${user.id}` }, () => loadAll())
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user, supabase, loadAll]);
 
+  // Actions
   const savePhone = async () => {
     if (!user) return;
-    setSaving(true);
-    setError("");
-    setMessage("");
-    const { error: err } = await supabase
-      .from("users")
-      .update({ nomor_hp: phone })
-      .eq("id", user.id);
+    setSaving(true); setError(""); setMessage("");
+    const { error: err } = await supabase.from("users").update({ nomor_hp: phone }).eq("id", user.id);
     setSaving(false);
-    if (err) {
-      setError(err.message);
-      return;
-    }
+    if (err) return setError(err.message);
     setMessage("Nomor telepon berhasil disimpan.");
     setEditingPhone(false);
   };
@@ -155,13 +206,7 @@ export default function AkunPage() {
   const openVehicleModal = (v?: Vehicle) => {
     if (v) {
       setEditingVehicle(v);
-      setVehicleForm({
-        merk: v.merk,
-        tipe: v.tipe,
-        tahun: v.tahun,
-        nomor_polisi: v.nomor_polisi,
-        warna: v.warna,
-      });
+      setVehicleForm({ merk: v.merk, tipe: v.tipe, tahun: v.tahun, nomor_polisi: v.nomor_polisi, warna: v.warna });
     } else {
       setEditingVehicle(null);
       setVehicleForm(emptyVehicle);
@@ -171,24 +216,15 @@ export default function AkunPage() {
 
   const saveVehicle = async () => {
     if (!user) return;
-    setSaving(true);
-    setError("");
+    setSaving(true); setError("");
     if (editingVehicle) {
-      const { error: err } = await supabase
-        .from("vehicles")
-        .update(vehicleForm)
-        .eq("id", editingVehicle.id);
+      const { error: err } = await supabase.from("vehicles").update(vehicleForm).eq("id", editingVehicle.id);
       if (err) setError(err.message);
     } else {
-      const { error: err } = await supabase.from("vehicles").insert({
-        ...vehicleForm,
-        user_id: user.id,
-      });
+      const { error: err } = await supabase.from("vehicles").insert({ ...vehicleForm, user_id: user.id });
       if (err) setError(err.message);
     }
-    setSaving(false);
-    setVehicleModal(false);
-    await loadAll();
+    setSaving(false); setVehicleModal(false); await loadAll();
   };
 
   const deleteVehicle = async (id: string) => {
@@ -201,522 +237,384 @@ export default function AkunPage() {
   const openBookingModal = (b?: Booking) => {
     if (b) {
       setEditingBooking(b);
-      setBookingForm({
-        vehicle_id: b.vehicle_id,
-        tanggal: b.tanggal.slice(0, 16),
-        jenis_servis: b.jenis_servis ?? "",
-        keluhan: b.keluhan ?? "",
-      });
+      setBookingForm({ vehicle_id: b.vehicle_id, tanggal: b.tanggal.slice(0, 16), jenis_servis: b.jenis_servis ?? "", keluhan: b.keluhan ?? "" });
     } else {
       setEditingBooking(null);
-      setBookingForm({
-        vehicle_id: vehicles[0]?.id ?? "",
-        tanggal: "",
-        jenis_servis: "",
-        keluhan: "",
-      });
+      setBookingForm({ vehicle_id: vehicles[0]?.id ?? "", tanggal: "", jenis_servis: "", keluhan: "" });
     }
     setBookingModal(true);
   };
 
   const saveBooking = async () => {
     if (!user) return;
-    setSaving(true);
-    setError("");
-    const payload = {
-      vehicle_id: bookingForm.vehicle_id,
-      tanggal: new Date(bookingForm.tanggal).toISOString(),
-      jenis_servis: bookingForm.jenis_servis,
-      keluhan: bookingForm.keluhan,
-    };
+    setSaving(true); setError("");
+    const payload = { vehicle_id: bookingForm.vehicle_id, tanggal: new Date(bookingForm.tanggal).toISOString(), jenis_servis: bookingForm.jenis_servis, keluhan: bookingForm.keluhan };
     if (editingBooking) {
-      const { error: err } = await supabase
-        .from("bookings")
-        .update(payload)
-        .eq("id", editingBooking.id);
+      const { error: err } = await supabase.from("bookings").update(payload).eq("id", editingBooking.id);
       if (err) setError(err.message);
     } else {
-      const { error: err } = await supabase.from("bookings").insert({
-        ...payload,
-        user_id: user.id,
-        status: "menunggu" as BookingStatus,
-      });
+      const { error: err } = await supabase.from("bookings").insert({ ...payload, user_id: user.id, status: "menunggu" });
       if (err) setError(err.message);
     }
-    setSaving(false);
-    setBookingModal(false);
-    await loadAll();
+    setSaving(false); setBookingModal(false); await loadAll();
   };
 
-  const cancelBooking = async (id: string) => {
-    if (!confirm("Batalkan booking ini?")) return;
-    const { error: err } = await supabase
-      .from("bookings")
-      .update({ status: "dibatalkan" })
-      .eq("id", id);
-    if (err) setError(err.message);
-    await loadAll();
+  const handleCancelBooking = async (bookingId: string, serviceId?: string) => {
+    if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
+    setIsCancelling(bookingId);
+    try {
+      const res = await fetch("/api/booking/cancel", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, service_id: serviceId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membatalkan pesanan");
+      setPopup({ show: true, type: 'success', message: 'Pesanan berhasil dibatalkan.' });
+      loadAll();
+    } catch (err: any) {
+      setPopup({ show: true, type: 'error', message: err.message });
+    } finally {
+      setIsCancelling(null);
+    }
+  };
+
+  const handlePayDeposit = async (paymentId: string) => {
+    setIsPaying(paymentId);
+    try {
+      const { error } = await supabase.from('payments').update({ status: 'lunas' }).eq('id', paymentId);
+      if (error) throw new Error(error.message);
+      setPopup({ show: true, type: 'success', message: 'Pembayaran deposit berhasil disimulasikan!' });
+      loadAll();
+    } catch (err: any) {
+      setPopup({ show: true, type: 'error', message: err.message });
+    } finally {
+      setIsPaying(null);
+    }
   };
 
   const downloadPaymentInvoice = async (payment: Payment) => {
-    const { data: service } = await supabase
-      .from("services")
-      .select("*, vehicles(*), users:user_id(nama,nomor_pelanggan,email,nomor_hp)")
-      .eq("id", payment.service_id)
-      .maybeSingle();
-    if (!service) {
-      setError("Data servis tidak ditemukan.");
-      return;
-    }
-    downloadInvoicePdf({
-      service: service as ServiceRecord,
-      payment,
-      customer: profile,
-      vehicle: (service as ServiceRecord).vehicles,
-    });
+    const { data: service } = await supabase.from("services").select("*, vehicles(*), users:user_id(nama,nomor_pelanggan,email,nomor_hp)").eq("id", payment.service_id).maybeSingle();
+    if (!service) return setError("Data servis tidak ditemukan.");
+    downloadInvoicePdf({ service: service as ServiceRecord, payment, customer: profile, vehicle: (service as ServiceRecord).vehicles });
   };
 
-  const navItems: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "profil", label: "Informasi Pribadi", icon: <LayoutDashboard className="h-4 w-4" /> },
-    { id: "kendaraan", label: "Kendaraan Saya", icon: <Car className="h-4 w-4" /> },
-    { id: "servis", label: "Riwayat Servis", icon: <History className="h-4 w-4" /> },
-    { id: "pembayaran", label: "Riwayat Pembayaran", icon: <CreditCard className="h-4 w-4" /> },
-    { id: "booking", label: "Booking Servis", icon: <Calendar className="h-4 w-4" /> },
-  ];
+  const filteredHistory = historyCards.filter(h => {
+    if (subTab === "Menunggu") return h.status.includes("Menunggu") || h.status === "Menunggu Kedatangan";
+    if (subTab === "Di Bengkel") return h.status.includes("Di Bengkel");
+    return h.status === subTab;
+  });
 
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-white/60">
+      <div className="flex min-h-screen bg-black items-center justify-center text-white/60">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-2 border-[#E07A5F] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold">Memuat profil...</p>
+          <p className="text-sm font-semibold">{loading ? "Memuat profil..." : "Mengarahkan ke halaman login..."}</p>
         </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-white/60">
-        <p className="text-sm">Mengarahkan ke halaman login...</p>
       </div>
     );
   }
 
   const activeProfile = profile || {
-    id: user.id,
-    nama: user.user_metadata?.full_name || user.user_metadata?.nama || user.email?.split("@")[0] || "Pengguna",
-    email: user.email || "",
-    nomor_hp: phone || "",
-    role: "customer",
-    foto: null,
-    status: "aktif",
-    nomor_pelanggan: "AC-00100",
-    notify_email: true,
-    notify_reminder: true,
-    notify_promo: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    id: user.id, nama: user.user_metadata?.full_name || user.email?.split("@")[0] || "Pengguna", email: user.email || "",
+    nomor_hp: phone || "", role: "customer", foto: null, status: "aktif", nomor_pelanggan: "AC-00100", created_at: new Date().toISOString()
   };
 
-  const Sidebar = (
-    <aside className="space-y-2">
-      {navItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => {
-            setTab(item.id);
-            setMobileNav(false);
-          }}
-          className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-bold transition ${
-            tab === item.id
-              ? "bg-[#E07A5F] text-white shadow-lg shadow-[#E07A5F]/20"
-              : "border border-white/5 bg-[#121212] text-white/70 hover:bg-[#1A1A1A] hover:text-white"
-          }`}
-        >
-          <span className="flex items-center gap-3">
-            {item.icon}
-            {item.label}
-          </span>
-        </button>
-      ))}
-      <Link
-        href="/settings"
-        className="flex w-full items-center gap-3 rounded-xl border border-white/5 bg-[#121212] px-4 py-3 text-sm font-bold text-white/70 transition hover:bg-[#1A1A1A] hover:text-white"
-      >
-        <Settings className="h-4 w-4" /> Settings
-      </Link>
-      <button
-        onClick={async () => {
-          await signOut();
-          router.push("/login");
-        }}
-        className="flex w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300 transition hover:bg-red-500/20"
-      >
-        <LogOut className="h-4 w-4" /> Logout
-      </button>
-    </aside>
-  );
-
   return (
-    <div className="min-h-screen pb-20 text-[#F4F1DE]">
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#121212]/90 px-4 py-4 backdrop-blur-md sm:px-6">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link href="/home" className="text-sm font-semibold text-white/70 hover:text-white">
-            ← Auto Craft
-          </Link>
+    <div className="min-h-screen bg-black text-[#F4F1DE] flex flex-col font-sans relative">
+      {/* Popups & Modals */}
+      {popup.show && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-[#1A1A1A] border border-white/10 rounded-2xl max-w-sm w-full p-6 text-center shadow-2xl">
+            <div className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-4 ${popup.type === 'success' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+              {popup.type === 'success' ? <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>}
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">{popup.type === 'success' ? 'Berhasil!' : 'Terjadi Kesalahan'}</h3>
+            <p className="text-white/60 mb-6">{popup.message}</p>
+            <button onClick={() => { if (popup.reloadOnClose) window.location.reload(); else setPopup({ ...popup, show: false }); }} className="w-full py-3 bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold rounded-xl transition">Tutup</button>
+          </motion.div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {paymentModal.show && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="bg-[#1A1A1A] border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+              <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">Pembayaran Deposit</h3>
+                <button onClick={() => { setPaymentModal({ show: false, paymentId: null, total: 0 }); setSelectedMethod(""); }} className="text-white/40 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-6">
+                <div className="mb-6 p-4 bg-black/40 rounded-2xl text-center border border-white/5">
+                  <p className="text-white/60 text-sm mb-1">Total Pembayaran</p>
+                  <p className="text-3xl font-black text-[#E07A5F]">Rp {paymentModal.total.toLocaleString("id-ID")}</p>
+                </div>
+                <h4 className="text-white font-semibold mb-3">Pilih Metode Pembayaran</h4>
+                <div className="space-y-3 mb-8">
+                  {[{ id: "bca", name: "BCA Virtual Account", icon: "🏦" }, { id: "mandiri", name: "Mandiri Virtual Account", icon: "🏦" }, { id: "qris", name: "QRIS (GoPay, OVO, Dana)", icon: "📱" }].map(method => (
+                    <button key={method.id} onClick={() => setSelectedMethod(method.id)} className={`w-full flex items-center p-4 rounded-2xl border transition-all ${selectedMethod === method.id ? 'border-[#E07A5F] bg-[#E07A5F]/10 text-white' : 'border-white/10 text-white/70 hover:border-white/30 hover:bg-white/5'}`}>
+                      <span className="text-2xl mr-3">{method.icon}</span><span className="font-semibold">{method.name}</span>
+                      {selectedMethod === method.id && <svg className="w-5 h-5 ml-auto text-[#E07A5F]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => { if (!selectedMethod || !paymentModal.paymentId) return; setPaymentModal({ show: false, paymentId: null, total: 0 }); handlePayDeposit(paymentModal.paymentId); }} disabled={!selectedMethod || isPaying !== null} className="w-full bg-[#E07A5F] hover:bg-[#d0694e] disabled:bg-white/10 disabled:text-white/40 disabled:cursor-not-allowed text-white font-bold py-4 rounded-2xl transition shadow-lg shadow-[#E07A5F]/20">Bayar Sekarang</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* HEADER */}
+      <header className="bg-[#121212]/90 backdrop-blur-md border-b border-white/10 px-6 py-4 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <Link href="/home" className="flex items-center gap-2 text-white/70 hover:text-white transition text-sm font-semibold">← Kembali ke Halaman Utama</Link>
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm font-bold text-white sm:inline">Profil Saya</span>
-            <button
-              className="rounded-lg border border-white/10 p-2 sm:hidden"
-              onClick={() => setMobileNav((v) => !v)}
-            >
-              {mobileNav ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
+            <div className="w-8 h-8 rounded-full bg-[#E07A5F] flex items-center justify-center text-white font-bold text-xs">
+              {activeProfile.nama?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <span className="text-white text-sm font-bold hidden sm:block">{activeProfile.nama}</span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {(message || error) && (
-          <div
-            className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
-              error
-                ? "border-red-500/40 bg-red-500/10 text-red-300"
-                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-            }`}
-          >
-            {error || message}
-          </div>
-        )}
-
-        {/* Profile header */}
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 overflow-hidden rounded-[28px] border border-white/10 bg-[#121212] shadow-2xl"
-        >
-          <div className="h-32 bg-gradient-to-r from-[#E07A5F]/30 via-[#1f4b7a]/30 to-amber-500/20 relative">
-            <div className="absolute top-4 right-6 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 backdrop-blur-md text-xs font-bold text-amber-400 border border-amber-400/30 shadow-lg">
-                <Award className="w-3.5 h-3.5" /> Platinum Member
-              </span>
+      <main className="max-w-7xl mx-auto w-full px-6 py-12 grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* SIDEBAR: Profile & Garage */}
+        <aside className="lg:col-span-1 space-y-6">
+          <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 text-center shadow-lg">
+            <div className="w-24 h-24 rounded-full bg-[#1A1A1A] border-4 border-[#E07A5F] mx-auto mb-4 flex items-center justify-center relative">
+              <User className="w-10 h-10 text-white/50" />
             </div>
-          </div>
-          <div className="-mt-12 flex flex-col gap-6 px-6 pb-6 sm:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex items-end gap-5">
-                <Avatar src={activeProfile.foto} name={activeProfile.nama} size={96} className="ring-4 ring-[#121212] shadow-2xl" />
-                <div className="pb-1">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="font-[family-name:var(--font-display)] text-2xl font-black text-white sm:text-3xl tracking-tight">
-                      {activeProfile.nama}
-                    </h1>
-                    <Badge tone={statusTone(activeProfile.status)}>{activeProfile.status}</Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-white/60 font-mono">
-                    ID Pelanggan: <span className="text-[#E07A5F] font-bold">{activeProfile.nomor_pelanggan ?? "—"}</span> · {activeProfile.email}
-                  </p>
-                </div>
-              </div>
+            <h2 className="text-xl font-bold text-white mb-1">{activeProfile.nama}</h2>
+            <p className="text-[#E07A5F] text-xs font-black uppercase tracking-widest mb-4">Member Reguler</p>
+            <div className="bg-[#1A1A1A] rounded-xl py-3 px-4 flex justify-between items-center text-sm mb-6 border border-white/5">
+              <span className="text-white/60">Poin Loyalitas</span>
+              <span className="text-white font-bold flex items-center gap-1"><Award className="w-4 h-4 text-amber-400" /> 1,250</span>
             </div>
 
-            {/* Ringkasan Statistik Cepat */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-white/5">
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-3.5 text-center transition hover:border-white/20">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider">Garasi Saya</p>
-                <p className="text-xl font-extrabold text-white mt-0.5">{vehicles.length} <span className="text-xs text-white/40 font-normal">unit</span></p>
-              </div>
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-3.5 text-center transition hover:border-white/20">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider">Riwayat Servis</p>
-                <p className="text-xl font-extrabold text-emerald-400 mt-0.5">{services.length} <span className="text-xs text-white/40 font-normal">kali</span></p>
-              </div>
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-3.5 text-center transition hover:border-white/20">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider">Booking Aktif</p>
-                <p className="text-xl font-extrabold text-amber-400 mt-0.5">{bookings.filter(b => !['selesai', 'dibatalkan', 'ditolak'].includes(b.status)).length} <span className="text-xs text-white/40 font-normal">jadwal</span></p>
-              </div>
-              <div className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-3.5 text-center transition hover:border-white/20">
-                <p className="text-[11px] font-bold text-white/40 uppercase tracking-wider">Loyalitas Poin</p>
-                <p className="text-xl font-extrabold text-[#E07A5F] mt-0.5">1,250 <span className="text-xs text-white/40 font-normal">pts</span></p>
-              </div>
+            <div className="space-y-2 text-left">
+              <button onClick={() => setMainTab("dashboard")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-bold text-sm ${mainTab === "dashboard" ? "bg-[#E07A5F] text-white" : "text-white/60 hover:text-white hover:bg-white/5"}`}>
+                <LayoutDashboard className="w-4 h-4" /> Pesanan & Servis
+              </button>
+              <button onClick={() => setMainTab("pembayaran")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-bold text-sm ${mainTab === "pembayaran" ? "bg-[#E07A5F] text-white" : "text-white/60 hover:text-white hover:bg-white/5"}`}>
+                <CreditCard className="w-4 h-4" /> Riwayat Pembayaran
+              </button>
+              <button onClick={() => setMainTab("profil")} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-bold text-sm ${mainTab === "profil" ? "bg-[#E07A5F] text-white" : "text-white/60 hover:text-white hover:bg-white/5"}`}>
+                <Settings className="w-4 h-4" /> Pengaturan Profil
+              </button>
+              <button onClick={async () => { await signOut(); router.push("/login"); }} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition font-bold text-sm text-red-400 hover:bg-red-500/10">
+                <LogOut className="w-4 h-4" /> Keluar
+              </button>
             </div>
           </div>
-        </motion.section>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          <div className={`${mobileNav ? "block" : "hidden"} md:block`}>{Sidebar}</div>
-
-          <div className="md:col-span-3">
-            <AnimatePresence mode="wait">
-              {tab === "profil" && (
-                <motion.div
-                  key="profil"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-[28px] border border-white/10 bg-[#121212] p-6 sm:p-8"
-                >
-                  <h2 className="mb-6 text-xl font-bold text-white">Informasi Pribadi</h2>
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <Input label="Nama" value={activeProfile.nama} disabled hint="Hanya Admin/Kasir yang dapat mengubah" />
-                    <Input
-                      label="Nomor Pelanggan"
-                      value={activeProfile.nomor_pelanggan ?? ""}
-                      disabled
-                      hint="Hanya Admin/Kasir yang dapat mengubah"
-                    />
-                    <Input label="Email" value={activeProfile.email} disabled />
-                    <Input
-                      label="Nomor Telepon"
-                      value={phone}
-                      disabled={!editingPhone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                    <Input label="Tanggal Bergabung" value={formatDate(activeProfile.created_at)} disabled />
-                    <Input label="Total Servis" value={String(services.length)} disabled />
-                    <div className="sm:col-span-2">
-                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/50">
-                        Kendaraan Terdaftar
-                      </p>
-                      <p className="rounded-xl border border-white/10 bg-[#1A1A1A] px-4 py-3 text-sm text-white/80">
-                        {vehicles.length === 0
-                          ? "Belum ada kendaraan"
-                          : vehicles.map((v) => `${v.merk} ${v.tipe} (${v.nomor_polisi})`).join(" · ")}
-                      </p>
+          <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 shadow-lg">
+            <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Car className="w-5 h-5 text-[#E07A5F]" /> Garasi Saya</h3>
+            <div className="space-y-3">
+              {vehicles.map((car) => (
+                <div key={car.id} className="bg-[#1A1A1A] border border-white/5 rounded-2xl p-4 transition hover:border-white/20 group relative">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-white text-sm">{car.merk} {car.tipe}</p>
+                      <p className="text-white/50 text-xs mt-1">{car.tahun} • <span className="text-[#E07A5F] font-semibold">{car.nomor_polisi}</span></p>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                      <button onClick={() => openVehicleModal(car)} className="p-1.5 bg-white/5 rounded-md hover:bg-white/10 text-white/70"><Edit2 className="w-3 h-3" /></button>
+                      <button onClick={() => deleteVehicle(car.id)} className="p-1.5 bg-red-500/10 rounded-md hover:bg-red-500/20 text-red-400"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   </div>
-                  <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-white/5 pt-5">
-                    {!editingPhone ? (
-                      <Button onClick={() => setEditingPhone(true)}>Edit Nomor Telepon</Button>
-                    ) : (
-                      <>
-                        <Button variant="secondary" onClick={() => { setEditingPhone(false); setPhone(activeProfile.nomor_hp ?? ""); }}>
-                          Batal
-                        </Button>
-                        <Button onClick={savePhone} disabled={saving}>
-                          <Save className="h-4 w-4" /> {saving ? "Menyimpan..." : "Simpan Perubahan"}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              )}
+                </div>
+              ))}
+              <button onClick={() => openVehicleModal()} className="w-full bg-[#1A1A1A] hover:bg-[#E07A5F]/10 text-white/70 hover:text-white font-bold py-3 rounded-2xl border border-white/10 border-dashed hover:border-[#E07A5F]/50 transition text-xs mt-2 flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> Tambah Kendaraan
+              </button>
+            </div>
+          </div>
+        </aside>
 
-              {tab === "kendaraan" && (
-                <motion.div
-                  key="kendaraan"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-[28px] border border-white/10 bg-[#121212] p-6 sm:p-8"
-                >
-                  <div className="mb-6 flex items-center justify-between gap-3">
-                    <h2 className="text-xl font-bold text-white">Kendaraan Saya</h2>
-                    <Button size="sm" onClick={() => openVehicleModal()}>
-                      <Plus className="h-4 w-4" /> Tambah
-                    </Button>
+        {/* MAIN CONTENT */}
+        <div className="lg:col-span-3">
+          {(message || error) && (
+            <div className={`mb-6 rounded-2xl border px-5 py-4 text-sm font-semibold flex items-center justify-between ${error ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"}`}>
+              {error || message}
+              <button onClick={() => { setError(""); setMessage(""); }}><X className="w-4 h-4" /></button>
+            </div>
+          )}
+
+          <AnimatePresence mode="wait">
+            {/* TAB: DASHBOARD (PESANAN & SERVIS) */}
+            {mainTab === "dashboard" && (
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-[#121212] border border-white/10 rounded-3xl p-6 sm:p-10 min-h-[600px] shadow-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                  <div>
+                    <h1 className="text-3xl font-extrabold text-white mb-2">Pesanan & Servis</h1>
+                    <p className="text-white/60 text-sm">Pantau status pengerjaan mobil Anda dan kelola pesanan.</p>
                   </div>
-                  {vehicles.length === 0 ? (
-                    <div className="rounded-2xl border border-white/5 bg-[#1A1A1A] py-12 text-center">
-                      <Car className="mx-auto mb-3 h-10 w-10 text-white/20" />
-                      <p className="text-white/50">Belum ada kendaraan.</p>
+                  <Button onClick={() => openBookingModal()} className="shadow-lg shadow-[#E07A5F]/20"><Plus className="w-4 h-4" /> Buat Booking</Button>
+                </div>
+                
+                <div className="flex gap-4 border-b border-white/10 mb-8 overflow-x-auto pb-1 scrollbar-none">
+                  {subTabs.map((tab) => (
+                    <button key={tab} onClick={() => setSubTab(tab)} className={`pb-4 px-2 font-bold text-sm transition border-b-2 whitespace-nowrap ${subTab === tab ? "border-[#E07A5F] text-[#E07A5F]" : "border-transparent text-white/50 hover:text-white"}`}>
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-6">
+                  {filteredHistory.length === 0 ? (
+                    <div className="text-center py-20 text-white/40">
+                      <Wrench className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                      <p>Tidak ada riwayat servis untuk tab ini.</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {vehicles.map((car) => (
-                        <div
-                          key={car.id}
-                          className="flex flex-col justify-between gap-4 rounded-2xl border border-white/5 bg-[#1A1A1A] p-5 sm:flex-row sm:items-center"
-                        >
-                          <div>
-                            <h3 className="font-bold text-white">
-                              {car.merk} {car.tipe}
-                            </h3>
-                            <p className="mt-1 text-sm text-white/50">
-                              {car.tahun} · {car.warna} ·{" "}
-                              <span className="font-semibold text-[#E07A5F]">{car.nomor_polisi}</span>
-                            </p>
+                    filteredHistory.map((item) => (
+                      <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-[#1A1A1A] border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row gap-6 justify-between hover:border-white/30 transition-colors shadow-md relative overflow-hidden">
+                        <div className="flex-1 space-y-4 relative z-10">
+                          <div className="flex items-center gap-3">
+                            <span className="bg-white/10 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider">{item.id}</span>
+                            <span className="text-white/50 text-xs flex items-center gap-1"><Calendar className="w-3 h-3" /> {item.date}</span>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => openVehicleModal(car)}>
-                              <Edit2 className="h-3.5 w-3.5" /> Edit
-                            </Button>
-                            <Button variant="danger" size="sm" onClick={() => deleteVehicle(car.id)}>
-                              <Trash2 className="h-3.5 w-3.5" /> Hapus
-                            </Button>
+                          <div>
+                            <h3 className="text-xl font-bold text-white mb-1">{item.car}</h3>
+                            <div className="text-sm text-[#E07A5F] font-semibold flex items-center gap-2"><MapPin className="w-4 h-4" /> {item.branch}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">Layanan Dikerjakan:</span>
+                            <ul className="text-sm text-white/80 list-disc list-inside">
+                              {item.services.map((srv: string, i: number) => <li key={i}>{srv}</li>)}
+                            </ul>
                           </div>
                         </div>
-                      ))}
+
+                        <div className="sm:w-64 flex flex-col justify-between sm:items-end border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-6 relative z-10">
+                          <div className="w-full text-left sm:text-right mb-6">
+                            <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold block mb-1">Total Biaya</span>
+                            <span className="text-2xl font-black text-white">Rp {item.total.toLocaleString("id-ID")}</span>
+                          </div>
+                          
+                          <div className="w-full">
+                            {item.status === "Menunggu Konfirmasi" && (
+                              <div className="space-y-2 text-center">
+                                <span className="text-orange-400 font-bold text-sm mb-2 block border border-orange-500/30 bg-orange-500/10 py-2 rounded-xl">{item.status}</span>
+                                <button onClick={() => handleCancelBooking(item.rawBookingId, item.rawServiceId)} disabled={isCancelling === item.rawBookingId} className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20 disabled:opacity-50">
+                                  {isCancelling === item.rawBookingId ? "Membatalkan..." : "Batalkan"}
+                                </button>
+                              </div>
+                            )}
+
+                            {item.status === "Menunggu Kedatangan" && (
+                              <div className="space-y-2 text-center">
+                                {item.depositPayment ? (
+                                  <div className="mb-3">
+                                    <div className="text-left bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-2 relative overflow-hidden">
+                                      <p className="text-yellow-500 font-bold text-xs uppercase tracking-wider">Tagihan Deposit (30%)</p>
+                                      <p className="text-xl font-black text-white my-1">Rp {item.depositPayment.total.toLocaleString("id-ID")}</p>
+                                    </div>
+                                    <button onClick={() => setPaymentModal({ show: true, paymentId: item.depositPayment.id, total: item.depositPayment.total })} disabled={isPaying === item.depositPayment.id} className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 px-4 rounded-xl transition text-sm shadow-lg shadow-[#E07A5F]/20 disabled:opacity-50 flex items-center justify-center gap-2">
+                                      {isPaying === item.depositPayment.id ? "Memproses..." : "Bayar Deposit"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-[#E07A5F] font-bold text-sm mb-2 block border border-[#E07A5F]/30 bg-[#E07A5F]/10 py-2 rounded-xl">{item.status}</span>
+                                )}
+                                <button onClick={() => handleCancelBooking(item.rawBookingId, item.rawServiceId)} disabled={isCancelling === item.rawBookingId} className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-3 px-4 rounded-xl transition text-sm border border-red-500/20 disabled:opacity-50">
+                                  {isCancelling === item.rawBookingId ? "Membatalkan..." : "Batalkan"}
+                                </button>
+                              </div>
+                            )}
+                            
+                            {item.status === "Di Bengkel (Menunggu Antrean)" && (
+                              <div className="space-y-2 text-center">
+                                <span className="text-emerald-400 font-bold text-sm mb-2 block border border-emerald-500/30 bg-emerald-500/10 py-2 rounded-xl">Di Bengkel (Antrean)</span>
+                                <p className="text-[10px] text-white/50">Tidak bisa dibatalkan dari aplikasi.</p>
+                              </div>
+                            )}
+                            
+                            {item.status === "Proses" && (
+                              <div className="w-full">
+                                <div className="flex justify-between text-xs mb-2">
+                                  <span className="text-[#E07A5F] font-bold">Sedang Dikerjakan</span>
+                                  <span className="text-white/60">{item.progress}%</span>
+                                </div>
+                                <div className="w-full h-2 bg-black rounded-full overflow-hidden border border-white/5">
+                                  <div className="h-full bg-[#E07A5F]" style={{ width: `${item.progress}%` }} />
+                                </div>
+                              </div>
+                            )}
+
+                            {item.status === "Selesai" && (
+                              <div className="space-y-2 text-center">
+                                <span className="text-emerald-400 font-bold text-sm mb-2 block border border-emerald-500/30 bg-emerald-500/10 py-2 rounded-xl">Selesai Dikerjakan</span>
+                                <button className="w-full bg-[#E07A5F]/10 hover:bg-[#E07A5F]/20 text-[#E07A5F] font-bold py-3 px-4 rounded-xl transition text-sm border border-[#E07A5F]/30">Beri Ulasan</button>
+                              </div>
+                            )}
+
+                            {item.status === "Batal" && (
+                              <span className="text-red-400 font-bold text-sm mb-2 block border border-red-500/30 bg-red-500/10 py-2 rounded-xl text-center">Dibatalkan</span>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB: PROFIL */}
+            {mainTab === "profil" && (
+              <motion.div key="profil" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-[#121212] border border-white/10 rounded-3xl p-6 sm:p-10 shadow-lg">
+                <h2 className="mb-6 text-2xl font-extrabold text-white">Pengaturan Profil</h2>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                  <Input label="Nama" value={activeProfile.nama} disabled hint="Hubungi Admin untuk mengubah" />
+                  <Input label="Nomor Pelanggan" value={activeProfile.nomor_pelanggan ?? ""} disabled hint="ID Pelanggan Unik" />
+                  <Input label="Email" value={activeProfile.email} disabled />
+                  <Input label="Nomor Telepon" value={phone} disabled={!editingPhone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-white/5 pt-6">
+                  {!editingPhone ? (
+                    <Button onClick={() => setEditingPhone(true)}><Edit2 className="w-4 h-4 mr-2" /> Edit Telepon</Button>
+                  ) : (
+                    <>
+                      <Button variant="secondary" onClick={() => { setEditingPhone(false); setPhone(activeProfile.nomor_hp ?? ""); }}>Batal</Button>
+                      <Button onClick={savePhone} disabled={saving}><Save className="h-4 w-4 mr-2" /> {saving ? "Menyimpan..." : "Simpan Perubahan"}</Button>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB: PEMBAYARAN */}
+            {mainTab === "pembayaran" && (
+              <motion.div key="pembayaran" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-[#121212] border border-white/10 rounded-3xl p-6 sm:p-10 shadow-lg">
+                <h2 className="mb-6 text-2xl font-extrabold text-white">Riwayat Pembayaran</h2>
+                <div className="space-y-4">
+                  {payments.map((p) => (
+                    <div key={p.id} className="flex flex-col justify-between gap-4 rounded-2xl border border-white/5 bg-[#1A1A1A] p-6 sm:flex-row sm:items-center hover:border-white/20 transition">
+                      <div>
+                        <p className="font-bold text-white text-lg">{p.nomor_invoice || p.services?.nomor_invoice || "Invoice"}</p>
+                        <div className="mt-1 flex items-center gap-3 text-sm text-white/50">
+                          <span>{formatDateTime(p.created_at)}</span>
+                          <span className="uppercase text-xs font-bold px-2 py-1 bg-white/5 rounded-md">{p.metode}</span>
+                          <Badge tone={statusTone(p.status)}>{p.status}</Badge>
+                        </div>
+                        <p className="mt-3 text-xl font-black text-[#E07A5F]">{formatCurrency(Number(p.total))}</p>
+                      </div>
+                      <Button variant="outline" className="border-white/10 hover:bg-white/5 hover:text-white" onClick={() => downloadPaymentInvoice(p)}>
+                        <Download className="h-4 w-4 mr-2" /> Unduh Invoice PDF
+                      </Button>
                     </div>
-                  )}
-                </motion.div>
-              )}
-
-              {tab === "servis" && (
-                <motion.div
-                  key="servis"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-[28px] border border-white/10 bg-[#121212] p-6 sm:p-8"
-                >
-                  <h2 className="mb-6 text-xl font-bold text-white">Riwayat Servis</h2>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] text-left text-sm">
-                      <thead className="text-[11px] uppercase tracking-wider text-white/40">
-                        <tr>
-                          <th className="pb-3">Tanggal</th>
-                          <th className="pb-3">Invoice</th>
-                          <th className="pb-3">Kendaraan</th>
-                          <th className="pb-3">Jenis Servis</th>
-                          <th className="pb-3">Teknisi</th>
-                          <th className="pb-3">Total</th>
-                          <th className="pb-3">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {services.map((s) => (
-                          <tr
-                            key={s.id}
-                            onClick={() => setServiceDetail(s)}
-                            className="cursor-pointer border-t border-white/5 transition hover:bg-white/[0.03]"
-                          >
-                            <td className="py-3 text-white/80">{formatDate(s.tanggal)}</td>
-                            <td className="py-3 font-semibold text-white">{s.nomor_invoice}</td>
-                            <td className="py-3 text-white/70">
-                              {s.vehicles ? `${s.vehicles.merk} ${s.vehicles.tipe}` : "—"}
-                            </td>
-                            <td className="py-3 text-white/70">{s.pekerjaan ?? "—"}</td>
-                            <td className="py-3 text-white/70">{s.mekanik ?? "—"}</td>
-                            <td className="py-3 text-white">{formatCurrency(Number(s.total))}</td>
-                            <td className="py-3">
-                              <Badge tone={statusTone(s.status)}>{s.status}</Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {services.length === 0 && (
-                      <p className="py-10 text-center text-white/40">Belum ada riwayat servis.</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {tab === "pembayaran" && (
-                <motion.div
-                  key="pembayaran"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-[28px] border border-white/10 bg-[#121212] p-6 sm:p-8"
-                >
-                  <h2 className="mb-6 text-xl font-bold text-white">Riwayat Pembayaran</h2>
-                  <div className="space-y-3">
-                    {payments.map((p) => (
-                      <div
-                        key={p.id}
-                        className="flex flex-col justify-between gap-4 rounded-2xl border border-white/5 bg-[#1A1A1A] p-5 sm:flex-row sm:items-center"
-                      >
-                        <div>
-                          <p className="font-bold text-white">
-                            {p.nomor_invoice || p.services?.nomor_invoice || "Invoice"}
-                          </p>
-                          <p className="mt-1 text-sm text-white/50">
-                            {formatDateTime(p.created_at)} · {p.metode} ·{" "}
-                            <Badge tone={statusTone(p.status)}>{p.status}</Badge>
-                          </p>
-                          <p className="mt-2 text-lg font-bold text-[#E07A5F]">
-                            {formatCurrency(Number(p.total))}
-                          </p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => downloadPaymentInvoice(p)}>
-                          <Download className="h-4 w-4" /> Download PDF
-                        </Button>
-                      </div>
-                    ))}
-                    {payments.length === 0 && (
-                      <p className="py-10 text-center text-white/40">Belum ada pembayaran.</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {tab === "booking" && (
-                <motion.div
-                  key="booking"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="rounded-[28px] border border-white/10 bg-[#121212] p-6 sm:p-8"
-                >
-                  <div className="mb-6 flex items-center justify-between gap-3">
-                    <h2 className="text-xl font-bold text-white">Booking Servis</h2>
-                    <Button
-                      size="sm"
-                      onClick={() => openBookingModal()}
-                      disabled={vehicles.length === 0}
-                    >
-                      <Plus className="h-4 w-4" /> Buat Booking
-                    </Button>
-                  </div>
-                  {vehicles.length === 0 && (
-                    <p className="mb-4 text-sm text-amber-300/80">
-                      Tambahkan kendaraan terlebih dahulu sebelum booking.
-                    </p>
-                  )}
-                  <div className="space-y-3">
-                    {bookings.map((b) => (
-                      <div
-                        key={b.id}
-                        className="rounded-2xl border border-white/5 bg-[#1A1A1A] p-5"
-                      >
-                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                          <div>
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <Badge tone={statusTone(b.status)}>{b.status}</Badge>
-                              <span className="text-sm text-white/50">{formatDateTime(b.tanggal)}</span>
-                            </div>
-                            <p className="font-bold text-white">
-                              {b.vehicles
-                                ? `${b.vehicles.merk} ${b.vehicles.tipe} · ${b.vehicles.nomor_polisi}`
-                                : "Kendaraan"}
-                            </p>
-                            <p className="mt-1 text-sm text-white/60">
-                              {b.jenis_servis || "Servis"} {b.keluhan ? `— ${b.keluhan}` : ""}
-                            </p>
-                            {b.mekanik && (
-                              <p className="mt-1 flex items-center gap-1 text-xs text-white/40">
-                                <Wrench className="h-3 w-3" /> {b.mekanik}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            {!["selesai", "dibatalkan", "ditolak"].includes(b.status) && (
-                              <>
-                                <Button variant="secondary" size="sm" onClick={() => openBookingModal(b)}>
-                                  Ubah Jadwal
-                                </Button>
-                                <Button variant="danger" size="sm" onClick={() => cancelBooking(b.id)}>
-                                  Batalkan
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {bookings.length === 0 && (
-                      <p className="py-10 text-center text-white/40">Belum ada booking.</p>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                  ))}
+                  {payments.length === 0 && <p className="py-10 text-center text-white/40">Belum ada pembayaran.</p>}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </main>
 
+      {/* MODALS */}
       <Modal open={vehicleModal} onClose={() => setVehicleModal(false)} title={editingVehicle ? "Edit Kendaraan" : "Tambah Kendaraan"}>
         <div className="space-y-4">
           <Input label="Merek" value={vehicleForm.merk} onChange={(e) => setVehicleForm({ ...vehicleForm, merk: e.target.value })} />
@@ -726,76 +624,29 @@ export default function AkunPage() {
           <Input label="Warna" value={vehicleForm.warna} onChange={(e) => setVehicleForm({ ...vehicleForm, warna: e.target.value })} />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setVehicleModal(false)}>Batal</Button>
-            <Button onClick={saveVehicle} disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</Button>
+            <Button onClick={saveVehicle} disabled={saving}>{saving ? "Menyimpan..." : "Simpan Kendaraan"}</Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={bookingModal} onClose={() => setBookingModal(false)} title={editingBooking ? "Ubah Jadwal" : "Buat Booking"}>
+      <Modal open={bookingModal} onClose={() => setBookingModal(false)} title={editingBooking ? "Ubah Jadwal" : "Buat Booking Baru"}>
         <div className="space-y-4">
-          <Select
-            label="Kendaraan"
-            value={bookingForm.vehicle_id}
-            onChange={(e) => setBookingForm({ ...bookingForm, vehicle_id: e.target.value })}
-          >
+          <Select label="Kendaraan" value={bookingForm.vehicle_id} onChange={(e) => setBookingForm({ ...bookingForm, vehicle_id: e.target.value })}>
+            <option value="" disabled>Pilih kendaraan...</option>
             {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.merk} {v.tipe} — {v.nomor_polisi}
-              </option>
+              <option key={v.id} value={v.id}>{v.merk} {v.tipe} — {v.nomor_polisi}</option>
             ))}
           </Select>
-          <Input
-            label="Tanggal & Waktu"
-            type="datetime-local"
-            value={bookingForm.tanggal}
-            onChange={(e) => setBookingForm({ ...bookingForm, tanggal: e.target.value })}
-          />
-          <Input
-            label="Jenis Servis"
-            value={bookingForm.jenis_servis}
-            onChange={(e) => setBookingForm({ ...bookingForm, jenis_servis: e.target.value })}
-          />
-          <Textarea
-            label="Keluhan"
-            rows={3}
-            value={bookingForm.keluhan}
-            onChange={(e) => setBookingForm({ ...bookingForm, keluhan: e.target.value })}
-          />
+          <Input label="Tanggal & Waktu Drop-off" type="datetime-local" value={bookingForm.tanggal} onChange={(e) => setBookingForm({ ...bookingForm, tanggal: e.target.value })} />
+          <Input label="Jenis Servis" placeholder="Contoh: Ganti Oli, Tune Up" value={bookingForm.jenis_servis} onChange={(e) => setBookingForm({ ...bookingForm, jenis_servis: e.target.value })} />
+          <Textarea label="Keluhan (Opsional)" rows={3} placeholder="Jelaskan keluhan kendaraan Anda..." value={bookingForm.keluhan} onChange={(e) => setBookingForm({ ...bookingForm, keluhan: e.target.value })} />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setBookingModal(false)}>Batal</Button>
             <Button onClick={saveBooking} disabled={saving || !bookingForm.vehicle_id || !bookingForm.tanggal}>
-              {saving ? "Menyimpan..." : "Simpan"}
+              {saving ? "Memproses..." : "Konfirmasi Booking"}
             </Button>
           </div>
         </div>
-      </Modal>
-
-      <Modal open={!!serviceDetail} onClose={() => setServiceDetail(null)} title="Detail Servis" wide>
-        {serviceDetail && (
-          <div className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-3">
-              <p><span className="text-white/40">Invoice</span><br />{serviceDetail.nomor_invoice}</p>
-              <p><span className="text-white/40">Tanggal</span><br />{formatDate(serviceDetail.tanggal)}</p>
-              <p><span className="text-white/40">Teknisi</span><br />{serviceDetail.mekanik ?? "—"}</p>
-              <p><span className="text-white/40">Status</span><br /><Badge tone={statusTone(serviceDetail.status)}>{serviceDetail.status}</Badge></p>
-              <p className="col-span-2"><span className="text-white/40">Keluhan</span><br />{serviceDetail.keluhan ?? "—"}</p>
-              <p className="col-span-2"><span className="text-white/40">Pekerjaan</span><br />{serviceDetail.pekerjaan ?? "—"}</p>
-            </div>
-            <p className="text-lg font-bold text-[#E07A5F]">{formatCurrency(Number(serviceDetail.total))}</p>
-            <Button
-              variant="outline"
-              onClick={() =>
-                downloadInvoicePdf({
-                  service: serviceDetail,
-                  customer: profile,
-                  vehicle: serviceDetail.vehicles,
-                })
-              }
-            >
-              <Download className="h-4 w-4" /> Download Invoice PDF
-            </Button>
-          </div>
-        )}
       </Modal>
     </div>
   );

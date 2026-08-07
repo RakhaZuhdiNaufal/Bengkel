@@ -49,10 +49,11 @@ export default function BookingsPage() {
   const [saving, setSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
+    type: 'confirm' | 'success' | 'error';
     title: string;
     message: string;
     onConfirm: () => void;
-  }>({ show: false, title: "", message: "", onConfirm: () => {} });
+  }>({ show: false, type: 'confirm', title: "", message: "", onConfirm: () => {} });
 
   const supabase = createClient();
 
@@ -60,8 +61,8 @@ export default function BookingsPage() {
     fetchBookings();
   }, []);
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = async (silent = false) => {
+    if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("bookings")
       .select(`
@@ -147,7 +148,7 @@ export default function BookingsPage() {
     }
     
     setIsProcessModalOpen(false);
-    fetchBookings();
+    fetchBookings(true);
     setSaving(false);
   };
 
@@ -159,6 +160,7 @@ export default function BookingsPage() {
       
     setConfirmModal({
       show: true,
+      type: 'confirm',
       title: isEarly ? 'Konfirmasi Drop-Off Awal' : 'Konfirmasi Check-In',
       message: confirmMsg,
       onConfirm: () => executeCheckIn(booking)
@@ -176,7 +178,7 @@ export default function BookingsPage() {
       .eq("id", booking.id);
     
     if (updateErr) {
-      alert("Gagal melakukan Check-In: " + updateErr.message);
+      setConfirmModal({ show: true, type: 'error', title: 'Gagal', message: "Gagal melakukan Check-In: " + updateErr.message, onConfirm: () => {} });
       setSaving(false);
       return;
     }
@@ -201,7 +203,7 @@ export default function BookingsPage() {
       .single();
 
     if (serviceErr) {
-      alert("Check-In berhasil, tapi gagal membuat Work Order: " + serviceErr.message);
+      setConfirmModal({ show: true, type: 'error', title: 'Terjadi Kesalahan', message: "Check-In berhasil, tapi gagal membuat Work Order: " + serviceErr.message, onConfirm: () => {} });
       setSaving(false);
       fetchBookings();
       return;
@@ -215,9 +217,15 @@ export default function BookingsPage() {
         .eq("booking_id", booking.id);
     }
 
-    alert(`✅ Check-In berhasil!\n${booking.users?.nama} - ${booking.vehicles?.nomor_polisi}\nWork Order: ${invoiceNumber}`);
+    setConfirmModal({
+      show: true, 
+      type: 'success', 
+      title: '✅ Check-In Berhasil!', 
+      message: `${booking.users?.nama} - ${booking.vehicles?.nomor_polisi}\nWork Order: ${invoiceNumber}`,
+      onConfirm: () => {} 
+    });
     setSaving(false);
-    fetchBookings();
+    fetchBookings(true);
   };
 
   const processWalkinCreation = async (userId: string) => {
@@ -281,8 +289,9 @@ export default function BookingsPage() {
     setWalkinTipe("");
     setWalkinNopol("");
     setWalkinKeluhan("");
-    fetchBookings();
     setSaving(false);
+    setIsAddModalOpen(false);
+    fetchBookings(true);
   };
 
   const handleAddWalkin = async (e: React.FormEvent) => {
@@ -344,18 +353,29 @@ export default function BookingsPage() {
               <h3 className="text-xl font-bold text-white mb-2">{confirmModal.title}</h3>
               <p className="text-white/70 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{confirmModal.message}</p>
               <div className="flex gap-3 justify-end">
-                <button 
-                  onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  onClick={confirmModal.onConfirm}
-                  className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
-                >
-                  Ya, Lanjutkan
-                </button>
+                {confirmModal.type === 'confirm' ? (
+                  <>
+                    <button 
+                      onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button 
+                      onClick={confirmModal.onConfirm}
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
+                    >
+                      Ya, Lanjutkan
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
+                  >
+                    Tutup
+                  </button>
+                )}
               </div>
             </motion.div>
           </div>
@@ -505,12 +525,13 @@ export default function BookingsPage() {
                                   onClick={() => {
                                     setConfirmModal({
                                       show: true,
+                                      type: 'confirm',
                                       title: 'Konfirmasi No-Show',
                                       message: 'Pelanggan ini tidak datang (No-Show). Yakin ingin membatalkan pesanan ini?',
                                       onConfirm: async () => {
                                         setConfirmModal(prev => ({ ...prev, show: false }));
                                         await supabase.from("bookings").update({status: 'batal'}).eq('id', booking.id);
-                                        fetchBookings();
+                                        fetchBookings(true);
                                       }
                                     });
                                   }}
@@ -523,7 +544,7 @@ export default function BookingsPage() {
                             }
 
                             // CEK STATUS DEPOSIT
-                            const hasPendingDeposit = booking.payments?.some(p => p.status === 'pending' && p.total > 0);
+                            const hasPendingDeposit = booking.payments?.some((p: any) => p.status === 'pending' && p.total > 0);
 
                             if (hasPendingDeposit) {
                               return (

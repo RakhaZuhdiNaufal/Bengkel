@@ -42,7 +42,7 @@ export default function HomePage() {
     { name: "Promosi", path: "/promosi" },
     { name: "Lokasi", path: "/lokasi" },
     { name: "Ulasan", path: "/ulasan" },
-    { name: "Riwayat Servis", path: "/riwayat" },
+    { name: "Riwayat Servis", path: "/akun" },
     { name: "Tips Servis Mobil", path: "/tips" },
     { name: "Mengenal Auto Craft", path: "/about" },
   ];
