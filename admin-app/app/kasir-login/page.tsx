@@ -36,8 +36,8 @@ export default function KasirLogin() {
         .eq("id", userId)
         .single();
 
-      if (profile && profile.role === "kasir") {
-        window.location.href = "/dashboard"; // Ini akan mengarah ke (kasir)/dashboard
+      if (profile?.role === "kasir") {
+        window.location.href = "/kasir/dashboard";
       } else {
         await supabase.auth.signOut();
         setErrorMsg("Akses ditolak. Anda bukan kasir.");

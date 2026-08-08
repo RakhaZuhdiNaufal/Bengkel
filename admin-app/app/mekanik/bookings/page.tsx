@@ -348,22 +348,22 @@ export default function BookingsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#1A1A1A] border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl"
+              className="bg-white shadow border border-gray-200 rounded-2xl max-w-md w-full p-6 shadow-2xl"
             >
-              <h3 className="text-xl font-bold text-white mb-2">{confirmModal.title}</h3>
-              <p className="text-white/70 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{confirmModal.message}</p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{confirmModal.title}</h3>
+              <p className="text-gray-700 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{confirmModal.message}</p>
               <div className="flex gap-3 justify-end">
                 {confirmModal.type === 'confirm' ? (
                   <>
                     <button 
                       onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-white shadow-sm transition-colors"
                     >
                       Batal
                     </button>
                     <button 
                       onClick={confirmModal.onConfirm}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-900 bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
                     >
                       Ya, Lanjutkan
                     </button>
@@ -371,7 +371,7 @@ export default function BookingsPage() {
                 ) : (
                   <button 
                     onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-900 bg-[#E07A5F] hover:bg-[#d0694e] transition-colors"
                   >
                     Tutup
                   </button>
@@ -390,48 +390,48 @@ export default function BookingsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Kelola Pesanan (Booking)</h1>
-          <p className="text-white/60 mt-1">Konfirmasi antrean online atau tambahkan walk-in manual.</p>
+          <p className="text-gray-900/60 mt-1">Konfirmasi antrean online atau tambahkan walk-in manual.</p>
         </div>
         <button 
           onClick={openAddModal}
-          className="px-5 py-2.5 bg-[#E07A5F] hover:bg-[#d0694e] text-white font-semibold rounded-xl shadow-lg transition-colors inline-flex items-center gap-2"
+          className="px-5 py-2.5 bg-[#E07A5F] hover:bg-[#d0694e] text-gray-900 font-semibold rounded-xl shadow-lg transition-colors inline-flex items-center gap-2"
         >
           <span>+ Pesanan Walk-in</span>
         </button>
       </div>
 
       {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row gap-4 bg-[#1A1A1A] p-4 rounded-2xl border border-white/10">
+      <div className="flex flex-col sm:flex-row gap-4 bg-white shadow p-4 rounded-2xl border border-gray-200">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input 
             type="text" 
             placeholder="Cari nama, nomor polisi, atau ID pesanan..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors"
+            className="w-full bg-black/40 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F] transition-colors"
           />
         </div>
         <select 
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
+          className="bg-black/40 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
         >
-          <option className="bg-[#121212]" value="all">Semua Status</option>
-          <option className="bg-[#121212]" value="menunggu">Menunggu Konfirmasi</option>
-          <option className="bg-[#121212]" value="diterima">Diterima (Belum Check-In)</option>
-          <option className="bg-[#121212]" value="checked_in">Sudah Check-In</option>
-          <option className="bg-[#121212]" value="ditolak">Ditolak</option>
-          <option className="bg-[#121212]" value="batal">Dibatalkan</option>
+          <option className="bg-white shadow-sm" value="all">Semua Status</option>
+          <option className="bg-white shadow-sm" value="menunggu">Menunggu Konfirmasi</option>
+          <option className="bg-white shadow-sm" value="diterima">Diterima (Belum Check-In)</option>
+          <option className="bg-white shadow-sm" value="checked_in">Sudah Check-In</option>
+          <option className="bg-white shadow-sm" value="ditolak">Ditolak</option>
+          <option className="bg-white shadow-sm" value="batal">Dibatalkan</option>
         </select>
       </div>
 
       {/* Booking List grouped by Date */}
       <div className="space-y-12">
         {loading ? (
-          <div className="py-12 text-center text-white/40">Memuat data pesanan...</div>
+          <div className="py-12 text-center text-gray-500">Memuat data pesanan...</div>
         ) : filteredBookings.length === 0 ? (
-          <div className="py-12 text-center text-white/40">Tidak ada pesanan ditemukan.</div>
+          <div className="py-12 text-center text-gray-500">Tidak ada pesanan ditemukan.</div>
         ) : (
           <>
             {(() => {
@@ -445,7 +445,7 @@ export default function BookingsPage() {
                     <motion.div 
                       key={booking.id}
                       layout
-                      className="bg-[#1A1A1A] border border-white/10 p-6 rounded-2xl hover:border-white/20 transition-all flex flex-col"
+                      className="bg-white shadow border border-gray-200 p-6 rounded-2xl hover:border-gray-200 transition-all flex flex-col"
                     >
                       <div className="flex justify-between items-start mb-4">
                         <div>
@@ -463,7 +463,7 @@ export default function BookingsPage() {
                           <div className="text-[#E07A5F] font-bold text-sm">
                             {dayjs(booking.tanggal).format("DD MMM YYYY")}
                           </div>
-                          <div className="text-white/60 text-xs">
+                          <div className="text-gray-900/60 text-xs">
                             Pukul {dayjs(booking.tanggal).format("HH:mm")}
                           </div>
                         </div>
@@ -471,24 +471,24 @@ export default function BookingsPage() {
 
                       <div className="space-y-4 flex-1">
                         <div>
-                          <h3 className="font-semibold text-lg text-white">{booking.users?.nama || "Pelanggan"}</h3>
-                          <p className="text-sm text-white/60">{booking.users?.nomor_hp || "-"}</p>
+                          <h3 className="font-semibold text-lg text-gray-900">{booking.users?.nama || "Pelanggan"}</h3>
+                          <p className="text-sm text-gray-900/60">{booking.users?.nomor_hp || "-"}</p>
                         </div>
                         
-                        <div className="bg-black/30 p-3 rounded-xl border border-white/5">
-                          <div className="text-xs text-white/40 mb-1">KENDARAAN</div>
-                          <div className="font-medium text-white">{booking.vehicles?.merk} {booking.vehicles?.tipe}</div>
-                          <div className="text-sm text-white/70 font-mono mt-0.5 uppercase">{booking.vehicles?.nomor_polisi}</div>
+                        <div className="bg-black/30 p-3 rounded-xl border border-gray-200">
+                          <div className="text-xs text-gray-500 mb-1">KENDARAAN</div>
+                          <div className="font-medium text-gray-900">{booking.vehicles?.merk} {booking.vehicles?.tipe}</div>
+                          <div className="text-sm text-gray-700 font-mono mt-0.5 uppercase">{booking.vehicles?.nomor_polisi}</div>
                         </div>
 
                         <div>
-                          <div className="text-xs text-white/40 mb-1">KELUHAN / PERMINTAAN</div>
-                          <p className="text-sm text-white/80 line-clamp-2">{booking.keluhan || booking.jenis_servis || "-"}</p>
+                          <div className="text-xs text-gray-500 mb-1">KELUHAN / PERMINTAAN</div>
+                          <p className="text-sm text-gray-900/80 line-clamp-2">{booking.keluhan || booking.jenis_servis || "-"}</p>
                         </div>
                       </div>
 
                       {booking.status === 'menunggu' && (
-                        <div className="mt-6 flex gap-3 border-t border-white/10 pt-4">
+                        <div className="mt-6 flex gap-3 border-t border-gray-200 pt-4">
                           <button 
                             onClick={() => openProcessModal(booking, 'ditolak')}
                             className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
@@ -506,10 +506,10 @@ export default function BookingsPage() {
 
                       {/* ACTIONS BASE ON DATE AND STATUS */}
                       {booking.status === 'diterima' && (
-                        <div className="mt-6 border-t border-white/10 pt-4">
+                        <div className="mt-6 border-t border-gray-200 pt-4">
                           {(booking as any).estimasi_total > 0 && (
                             <div className="mb-3 bg-[#E07A5F]/10 border border-[#E07A5F]/30 rounded-xl px-3 py-2">
-                              <p className="text-xs text-white/50">Estimasi Deposit</p>
+                              <p className="text-xs text-gray-500">Estimasi Deposit</p>
                               <p className="text-sm font-bold text-[#E07A5F]">Rp {Number((booking as any).estimasi_total).toLocaleString("id-ID")}</p>
                             </div>
                           )}
@@ -550,7 +550,7 @@ export default function BookingsPage() {
                               return (
                                 <button 
                                   disabled
-                                  className="w-full py-3 rounded-xl text-sm font-bold text-white/50 bg-white/5 transition-colors flex items-center justify-center gap-2 border border-white/10 cursor-not-allowed"
+                                  className="w-full py-3 rounded-xl text-sm font-bold text-gray-500 bg-white shadow-sm transition-colors flex items-center justify-center gap-2 border border-gray-200 cursor-not-allowed"
                                 >
                                   <LogIn className="w-4 h-4" /> Menunggu Pembayaran Deposit
                                 </button>
@@ -575,7 +575,7 @@ export default function BookingsPage() {
                               <button 
                                 onClick={() => handleCheckIn(booking, false)}
                                 disabled={saving}
-                                className="w-full py-3 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                                className="w-full py-3 rounded-xl text-sm font-bold text-gray-900 bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 disabled:opacity-50"
                               >
                                 <LogIn className="w-4 h-4" /> Check-In Customer
                               </button>
@@ -592,19 +592,19 @@ export default function BookingsPage() {
                  <>
                    {todayBookings.length > 0 && (
                      <div className="space-y-4">
-                       <h2 className="text-xl font-bold text-white flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#E07A5F]"></div> Jadwal Hari Ini</h2>
+                       <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-[#E07A5F]"></div> Jadwal Hari Ini</h2>
                        {renderGrid(todayBookings)}
                      </div>
                    )}
                    {upcomingBookings.length > 0 && (
                      <div className="space-y-4">
-                       <h2 className="text-xl font-bold text-white flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Jadwal Mendatang</h2>
+                       <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Jadwal Mendatang</h2>
                        {renderGrid(upcomingBookings)}
                      </div>
                    )}
                    {pastBookings.length > 0 && (
                      <div className="space-y-4">
-                       <h2 className="text-xl font-bold text-white/60 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white/20"></div> Riwayat Terdahulu</h2>
+                       <h2 className="text-xl font-bold text-gray-900/60 flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-white/20"></div> Riwayat Terdahulu</h2>
                        {renderGrid(pastBookings)}
                      </div>
                    )}
@@ -630,13 +630,13 @@ export default function BookingsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-white shadow-sm border border-gray-200 rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className={`p-6 border-b border-white/10 ${newStatus === 'diterima' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+              <div className={`p-6 border-b border-gray-200 ${newStatus === 'diterima' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                 <h2 className={`text-xl font-bold ${newStatus === 'diterima' ? 'text-green-400' : 'text-red-400'}`}>
                   {newStatus === 'diterima' ? 'Terima Pesanan?' : 'Tolak Pesanan?'}
                 </h2>
-                <p className="text-white/60 text-sm mt-1">
+                <p className="text-gray-900/60 text-sm mt-1">
                   Atas nama {selectedBooking.users?.nama} ({selectedBooking.vehicles?.nomor_polisi})
                 </p>
               </div>
@@ -644,7 +644,7 @@ export default function BookingsPage() {
               <form onSubmit={handleProcessBooking} className="p-6 space-y-4">
 
                 <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-2 uppercase">
+                  <label className="block text-xs font-semibold text-gray-900/80 mb-2 uppercase">
                     Catatan untuk Pelanggan (Opsional)
                   </label>
                   <textarea 
@@ -652,7 +652,7 @@ export default function BookingsPage() {
                     value={newCatatan}
                     onChange={(e) => setNewCatatan(e.target.value)}
                     rows={3}
-                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-white/30 transition-colors resize-none"
+                    className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-gray-300 transition-colors resize-none"
                   />
                 </div>
 
@@ -660,14 +660,14 @@ export default function BookingsPage() {
                   <button 
                     type="button"
                     onClick={() => setIsProcessModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-white shadow-sm transition-colors"
                   >
                     Batal
                   </button>
                   <button 
                     type="submit"
                     disabled={saving}
-                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-50 ${
+                    className={`px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-900 transition-colors disabled:opacity-50 ${
                       newStatus === 'diterima' ? 'bg-green-600 hover:bg-green-500' : 'bg-red-600 hover:bg-red-500'
                     }`}
                   >
@@ -695,11 +695,11 @@ export default function BookingsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-white shadow-sm border border-gray-200 rounded-2xl shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-white/10 bg-[#1A1A1A]">
-                <h2 className="text-xl font-bold text-white">Pesanan Walk-in Baru</h2>
-                <p className="text-white/60 text-sm mt-1">Daftarkan kendaraan dan langsung masukkan ke antrean servis.</p>
+              <div className="p-6 border-b border-gray-200 bg-white shadow">
+                <h2 className="text-xl font-bold text-gray-900">Pesanan Walk-in Baru</h2>
+                <p className="text-gray-900/60 text-sm mt-1">Daftarkan kendaraan dan langsung masukkan ke antrean servis.</p>
               </div>
               
               {showAccountPrompt ? (
@@ -708,30 +708,30 @@ export default function BookingsPage() {
                     <div className="w-16 h-16 bg-[#E07A5F]/20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Wrench className="w-8 h-8 text-[#E07A5F]" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">Buat Akun Pelanggan?</h3>
-                    <p className="text-sm text-white/60">
+                    <h3 className="text-lg font-bold text-gray-900">Buat Akun Pelanggan?</h3>
+                    <p className="text-sm text-gray-900/60">
                       Anda memasukkan pelanggan baru <strong>{walkinNamaBaru}</strong>.<br/>
                       Apakah Anda ingin membuatkan akun resmi untuknya agar bisa pesan online ke depannya?
                     </p>
                   </div>
                   
-                  <div className="flex flex-col gap-3 pt-4 border-t border-white/10">
+                  <div className="flex flex-col gap-3 pt-4 border-t border-gray-200">
                     <button 
                       onClick={() => window.location.href = "/users?openAdd=true"}
-                      className="w-full py-3 rounded-xl text-sm font-semibold bg-[#E07A5F] hover:bg-[#d0694e] text-white transition-colors"
+                      className="w-full py-3 rounded-xl text-sm font-semibold bg-[#E07A5F] hover:bg-[#d0694e] text-gray-900 transition-colors"
                     >
                       Ya, Pergi ke Halaman Pengguna
                     </button>
                     <button 
                       onClick={handleLanjutTanpaAkun}
                       disabled={saving}
-                      className="w-full py-3 rounded-xl text-sm font-semibold bg-white/5 hover:bg-white/10 text-white transition-colors disabled:opacity-50"
+                      className="w-full py-3 rounded-xl text-sm font-semibold bg-white shadow-sm hover:bg-white shadow-sm text-gray-900 transition-colors disabled:opacity-50"
                     >
                       {saving ? "Memproses..." : "Tidak, Lanjutkan Tanpa Akun (Guest)"}
                     </button>
                     <button 
                       onClick={() => setShowAccountPrompt(false)}
-                      className="w-full py-2 rounded-xl text-xs font-semibold text-white/40 hover:text-white/70 transition-colors"
+                      className="w-full py-2 rounded-xl text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
                     >
                       Kembali Edit Form
                     </button>
@@ -739,32 +739,32 @@ export default function BookingsPage() {
                 </div>
               ) : (
                 <form onSubmit={handleAddWalkin} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                  <div className="space-y-4 p-4 bg-black/30 rounded-xl border border-white/5">
+                  <div className="space-y-4 p-4 bg-black/30 rounded-xl border border-gray-200">
                     <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-2">PILIH PELANGGAN (JIKA SUDAH ADA)</label>
+                      <label className="block text-xs font-semibold text-gray-900/80 mb-2">PILIH PELANGGAN (JIKA SUDAH ADA)</label>
                       <select 
                         value={walkinUserId}
                         onChange={(e) => {
                           setWalkinUserId(e.target.value);
                           if(e.target.value) setWalkinNamaBaru("");
                         }}
-                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
+                        className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                       >
-                        <option className="bg-[#121212]" value="">-- Pilih Pelanggan Terdaftar --</option>
+                        <option className="bg-white shadow-sm" value="">-- Pilih Pelanggan Terdaftar --</option>
                         {customers.map(c => (
-                          <option className="bg-[#121212]" key={c.id} value={c.id}>{c.nama}</option>
+                          <option className="bg-white shadow-sm" key={c.id} value={c.id}>{c.nama}</option>
                         ))}
                       </select>
                     </div>
 
                     <div className="flex items-center gap-4">
-                      <div className="h-px bg-white/10 flex-1"></div>
-                      <span className="text-xs text-white/40 font-semibold">ATAU</span>
-                      <div className="h-px bg-white/10 flex-1"></div>
+                      <div className="h-px bg-white shadow-sm flex-1"></div>
+                      <span className="text-xs text-gray-500 font-semibold">ATAU</span>
+                      <div className="h-px bg-white shadow-sm flex-1"></div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-white/80 mb-2">NAMA PELANGGAN BARU</label>
+                      <label className="block text-xs font-semibold text-gray-900/80 mb-2">NAMA PELANGGAN BARU</label>
                       <input 
                         type="text" placeholder="Masukkan nama pelanggan baru..."
                         value={walkinNamaBaru} 
@@ -772,56 +772,56 @@ export default function BookingsPage() {
                           setWalkinNamaBaru(e.target.value);
                           if(e.target.value) setWalkinUserId("");
                         }}
-                        className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                        className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F]"
                       />
                     </div>
                   </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-2">MERK MOBIL</label>
+                    <label className="block text-xs font-semibold text-gray-900/80 mb-2">MERK MOBIL</label>
                     <input 
                       type="text" required placeholder="Misal: Toyota"
                       value={walkinMerk} onChange={(e) => setWalkinMerk(e.target.value)}
-                      className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                      className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-white/80 mb-2">TIPE MOBIL</label>
+                    <label className="block text-xs font-semibold text-gray-900/80 mb-2">TIPE MOBIL</label>
                     <input 
                       type="text" required placeholder="Misal: Avanza"
                       value={walkinTipe} onChange={(e) => setWalkinTipe(e.target.value)}
-                      className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F]"
+                      className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-2">NOMOR POLISI</label>
+                  <label className="block text-xs font-semibold text-gray-900/80 mb-2">NOMOR POLISI</label>
                   <input 
                     type="text" required placeholder="Misal: B 1234 XYZ"
                     value={walkinNopol} onChange={(e) => setWalkinNopol(e.target.value)}
-                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] uppercase"
+                    className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F] uppercase"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-white/80 mb-2">KELUHAN AWAL</label>
+                  <label className="block text-xs font-semibold text-gray-900/80 mb-2">KELUHAN AWAL</label>
                   <textarea 
                     required placeholder="Catat keluhan pelanggan..." rows={2}
                     value={walkinKeluhan} onChange={(e) => setWalkinKeluhan(e.target.value)}
-                    className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] resize-none"
+                    className="w-full bg-white shadow border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#E07A5F] resize-none"
                   />
                 </div>
 
-                  <div className="pt-4 flex gap-3 justify-end border-t border-white/10">
+                  <div className="pt-4 flex gap-3 justify-end border-t border-gray-200">
                     <button 
                       type="button" onClick={() => setIsAddModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:bg-white/10"
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-white shadow-sm"
                     >Batal</button>
                     <button 
                       type="submit" disabled={saving}
-                      className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#E07A5F] hover:bg-[#d0694e] text-white disabled:opacity-50"
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#E07A5F] hover:bg-[#d0694e] text-gray-900 disabled:opacity-50"
                     >{saving ? "Memproses..." : "Lanjut"}</button>
                   </div>
                 </form>
@@ -834,3 +834,5 @@ export default function BookingsPage() {
     </>
   );
 }
+
+

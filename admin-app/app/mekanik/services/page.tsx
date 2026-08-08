@@ -274,38 +274,38 @@ export default function ServicesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Kelola Servis</h1>
-          <p className="text-white/60 mt-1">Catat penggunaan sparepart, jasa, dan selesaikan pekerjaan.</p>
+          <p className="text-gray-900/60 mt-1">Catat penggunaan sparepart, jasa, dan selesaikan pekerjaan.</p>
         </div>
       </div>
 
       {/* Filters & Search */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
           <input
             type="text"
             placeholder="Cari invoice, pelanggan, atau plat nomor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:border-[#E07A5F] focus:outline-none transition"
+            className="w-full bg-white shadow-sm border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-gray-900 focus:border-[#E07A5F] focus:outline-none transition"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-[#E07A5F] focus:outline-none transition min-w-[150px]"
+          className="bg-white shadow-sm border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:border-[#E07A5F] focus:outline-none transition min-w-[150px]"
         >
-          <option className="bg-[#121212] text-white" value="all">Semua Status</option>
-          <option className="bg-[#121212] text-white" value="aktif">Aktif (Menunggu + Proses)</option>
-          <option className="bg-[#121212] text-white" value="menunggu">Menunggu Antrean</option>
-          <option className="bg-[#121212] text-white" value="proses">Sedang Dikerjakan</option>
-          <option className="bg-[#121212] text-white" value="selesai">Selesai</option>
-          <option className="bg-[#121212] text-white" value="dibatalkan">Dibatalkan</option>
+          <option className="bg-white shadow-sm text-gray-900" value="all">Semua Status</option>
+          <option className="bg-white shadow-sm text-gray-900" value="aktif">Aktif (Menunggu + Proses)</option>
+          <option className="bg-white shadow-sm text-gray-900" value="menunggu">Menunggu Antrean</option>
+          <option className="bg-white shadow-sm text-gray-900" value="proses">Sedang Dikerjakan</option>
+          <option className="bg-white shadow-sm text-gray-900" value="selesai">Selesai</option>
+          <option className="bg-white shadow-sm text-gray-900" value="dibatalkan">Dibatalkan</option>
         </select>
       </div>
 
       {loading ? (
-        <div className="text-center py-20 text-white/50">Memuat data servis...</div>
+        <div className="text-center py-20 text-gray-500">Memuat data servis...</div>
       ) : (
         <div className="space-y-10">
           {/* TAMPILAN JIKA FILTER = AKTIF / PROSES / MENUNGGU */}
@@ -314,14 +314,14 @@ export default function ServicesPage() {
               {/* 4 BAY UTAMA */}
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <h2 className="text-xl font-bold text-white">Sedang Dikerjakan (Bay Aktif)</h2>
+                  <h2 className="text-xl font-bold text-gray-900">Sedang Dikerjakan (Bay Aktif)</h2>
                   <span className="bg-[#E07A5F]/20 text-[#E07A5F] px-3 py-1 rounded-full text-xs font-bold border border-[#E07A5F]/30">
                     {activeBays.length} / 4 Slot
                   </span>
                 </div>
                 
                 {activeBays.length === 0 ? (
-                  <div className="bg-white/5 border border-white/10 border-dashed rounded-2xl p-10 text-center text-white/40">
+                  <div className="bg-white shadow-sm border border-gray-200 border-dashed rounded-2xl p-10 text-center text-gray-500">
                     Tidak ada kendaraan yang sedang dikerjakan.
                   </div>
                 ) : (
@@ -331,33 +331,33 @@ export default function ServicesPage() {
                         key={service.id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-between hover:border-white/30 transition-colors relative overflow-hidden"
+                        className="bg-white shadow-sm border border-gray-200 rounded-2xl p-6 flex flex-col justify-between hover:border-gray-300 transition-colors relative overflow-hidden"
                       >
-                        <div className="absolute top-0 right-0 bg-[#E07A5F] text-white text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">
+                        <div className="absolute top-0 right-0 bg-[#E07A5F] text-gray-900 text-[10px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">
                           BAY {index + 1}
                         </div>
                         
                         <div className="flex justify-between items-start mb-4 pt-2">
                           <div>
-                            <h3 className="text-xl font-bold text-white mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
                             <p className="text-[#E07A5F] font-mono font-semibold">{service.vehicles?.nomor_polisi}</p>
                           </div>
                         </div>
                         
                         <div className="space-y-2 mb-6 text-sm">
-                          <div className="flex justify-between border-b border-white/5 pb-2">
-                            <span className="text-white/50">Pelanggan</span>
-                            <span className="text-white">{service.users?.nama}</span>
+                          <div className="flex justify-between border-b border-gray-200 pb-2">
+                            <span className="text-gray-500">Pelanggan</span>
+                            <span className="text-gray-900">{service.users?.nama}</span>
                           </div>
-                          <div className="flex justify-between border-b border-white/5 pb-2">
-                            <span className="text-white/50">Pekerjaan</span>
-                            <span className="text-white text-right max-w-[200px] truncate">{service.pekerjaan}</span>
+                          <div className="flex justify-between border-b border-gray-200 pb-2">
+                            <span className="text-gray-500">Pekerjaan</span>
+                            <span className="text-gray-900 text-right max-w-[200px] truncate">{service.pekerjaan}</span>
                           </div>
                         </div>
                         
                         <button
                           onClick={() => openEditModal(service)}
-                          className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                          className="w-full bg-[#E07A5F] hover:bg-[#d0694e] text-gray-900 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
                         >
                           <Wrench className="w-4 h-4" /> Kerjakan & Selesaikan
                         </button>
@@ -370,32 +370,32 @@ export default function ServicesPage() {
               {/* ANTREAN MENUNGGU */}
               <div>
                 <div className="flex items-center gap-3 mb-4 mt-8">
-                  <h2 className="text-xl font-bold text-white/70">Daftar Antrean (Menunggu Slot)</h2>
-                  <span className="bg-white/10 text-white/50 px-3 py-1 rounded-full text-xs font-bold border border-white/10">
+                  <h2 className="text-xl font-bold text-gray-700">Daftar Antrean (Menunggu Slot)</h2>
+                  <span className="bg-white shadow-sm text-gray-500 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">
                     {waitingQueue.length} Kendaraan
                   </span>
                 </div>
                 
                 {waitingQueue.length === 0 ? (
-                  <div className="bg-transparent border border-white/5 border-dashed rounded-2xl p-6 text-center text-white/30 text-sm">
+                  <div className="bg-transparent border border-gray-200 border-dashed rounded-2xl p-6 text-center text-gray-900/30 text-sm">
                     Antrean kosong.
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {waitingQueue.map((service, index) => (
-                      <div key={service.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-80">
+                      <div key={service.id} className="bg-white shadow-sm border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-80">
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/40 font-black text-lg">
+                          <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-gray-500 font-black text-lg">
                             #{index + 1}
                           </div>
                           <div>
-                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
-                            <p className="text-white/50 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
+                            <h4 className="text-gray-900 font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-gray-500 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
                           </div>
                         </div>
                         <button
                           onClick={() => openEditModal(service)}
-                          className="bg-white/5 hover:bg-white/10 text-white/70 text-xs font-bold py-2 px-4 rounded-lg transition border border-white/10"
+                          className="bg-white shadow-sm hover:bg-white shadow-sm text-gray-700 text-xs font-bold py-2 px-4 rounded-lg transition border border-gray-200"
                         >
                           Edit Data
                         </button>
@@ -409,7 +409,7 @@ export default function ServicesPage() {
               {menungguServices.length > 0 && (
                 <div>
                   <div className="flex items-center gap-3 mb-4 mt-8">
-                    <h2 className="text-xl font-bold text-white/70">Menunggu Antrean (Sudah Check-In)</h2>
+                    <h2 className="text-xl font-bold text-gray-700">Menunggu Antrean (Sudah Check-In)</h2>
                     <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30">
                       {menungguServices.length} Kendaraan
                     </span>
@@ -417,20 +417,20 @@ export default function ServicesPage() {
                   
                   <div className="space-y-3">
                     {menungguServices.map((service) => (
-                      <div key={service.id} className="bg-[#121212] border border-yellow-500/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                      <div key={service.id} className="bg-white shadow-sm border border-yellow-500/20 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-400">
                             <Calendar className="w-5 h-5" />
                           </div>
                           <div>
-                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
-                            <p className="text-white/50 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
+                            <h4 className="text-gray-900 font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-gray-500 text-xs mt-1">Pelanggan: {service.users?.nama} | Pekerjaan: {service.pekerjaan}</p>
                           </div>
                         </div>
                         <button
                           onClick={() => handleStartService(service)}
                           disabled={activeBays.length >= 4}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-5 rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-gray-900 text-xs font-bold py-2.5 px-5 rounded-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Play className="w-3 h-3" /> Mulai Servis
                         </button>
@@ -444,7 +444,7 @@ export default function ServicesPage() {
               {futureServices.length > 0 && (
                 <div>
                   <div className="flex items-center gap-3 mb-4 mt-8">
-                    <h2 className="text-xl font-bold text-white/70">Jadwal Mendatang</h2>
+                    <h2 className="text-xl font-bold text-gray-700">Jadwal Mendatang</h2>
                     <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-500/30">
                       {futureServices.length} Kendaraan
                     </span>
@@ -452,17 +452,17 @@ export default function ServicesPage() {
                   
                   <div className="space-y-3">
                     {futureServices.map((service) => (
-                      <div key={service.id} className="bg-black/30 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-60">
+                      <div key={service.id} className="bg-black/30 border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between sm:items-center gap-4 opacity-60">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 font-bold">
                             <Calendar className="w-5 h-5" />
                           </div>
                           <div>
-                            <h4 className="text-white font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
-                            <p className="text-white/50 text-xs mt-1">Jadwal: {dayjs(service.bookings?.tanggal).format("DD MMM YYYY, HH:mm")} | Pelanggan: {service.users?.nama}</p>
+                            <h4 className="text-gray-900 font-bold">{service.vehicles?.merk} {service.vehicles?.tipe} <span className="text-[#E07A5F] ml-2 text-sm">{service.vehicles?.nomor_polisi}</span></h4>
+                            <p className="text-gray-500 text-xs mt-1">Jadwal: {dayjs(service.bookings?.tanggal).format("DD MMM YYYY, HH:mm")} | Pelanggan: {service.users?.nama}</p>
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-white/40 uppercase">Belum Waktunya</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase">Belum Waktunya</span>
                       </div>
                     ))}
                   </div>
@@ -475,21 +475,21 @@ export default function ServicesPage() {
           {(filterStatus !== "proses") && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {otherServices.length === 0 ? (
-                <div className="col-span-full text-center py-10 text-white/40">Tidak ada data.</div>
+                <div className="col-span-full text-center py-10 text-gray-500">Tidak ada data.</div>
               ) : (
                 otherServices.map((service) => (
                   <motion.div
                     key={service.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col justify-between hover:border-white/30 transition-colors"
+                    className="bg-white shadow-sm border border-gray-200 rounded-2xl p-6 flex flex-col justify-between hover:border-gray-300 transition-colors"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <span className="text-[10px] text-white/50 font-bold tracking-wider uppercase mb-1 block">
+                        <span className="text-[10px] text-gray-500 font-bold tracking-wider uppercase mb-1 block">
                           {service.nomor_invoice}
                         </span>
-                        <h3 className="text-xl font-bold text-white mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">{service.vehicles?.merk} {service.vehicles?.tipe}</h3>
                         <p className="text-[#E07A5F] font-mono font-semibold">{service.vehicles?.nomor_polisi}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -501,19 +501,19 @@ export default function ServicesPage() {
                     </div>
                     
                     <div className="space-y-2 mb-6 text-sm">
-                      <div className="flex justify-between border-b border-white/5 pb-2">
-                        <span className="text-white/50">Pelanggan</span>
-                        <span className="text-white">{service.users?.nama}</span>
+                      <div className="flex justify-between border-b border-gray-200 pb-2">
+                        <span className="text-gray-500">Pelanggan</span>
+                        <span className="text-gray-900">{service.users?.nama}</span>
                       </div>
-                      <div className="flex justify-between border-b border-white/5 pb-2">
-                        <span className="text-white/50">Total Biaya</span>
-                        <span className="text-white font-bold">Rp {service.total.toLocaleString("id-ID")}</span>
+                      <div className="flex justify-between border-b border-gray-200 pb-2">
+                        <span className="text-gray-500">Total Biaya</span>
+                        <span className="text-gray-900 font-bold">Rp {service.total.toLocaleString("id-ID")}</span>
                       </div>
                     </div>
                     
                     <button
                       onClick={() => openEditModal(service)}
-                      className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
+                      className="w-full bg-white shadow-sm hover:bg-white/20 text-gray-900 font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 text-sm"
                     >
                       <FileText className="w-4 h-4" /> Lihat Detail
                     </button>
@@ -540,16 +540,16 @@ export default function ServicesPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-[#121212] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              className="relative w-full max-w-4xl bg-white shadow-sm border border-gray-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#1A1A1A]">
+              <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-white shadow">
                 <div>
-                  <h2 className="text-xl font-bold text-white">Update Pekerjaan Servis</h2>
+                  <h2 className="text-xl font-bold text-gray-900">Update Pekerjaan Servis</h2>
                   <p className="text-[#E07A5F] font-mono text-sm mt-1">{selectedService.nomor_invoice}</p>
                 </div>
                 <div className="text-right">
-                  <div className="text-xs text-white/40 uppercase tracking-widest">Total Tagihan</div>
-                  <div className="text-2xl font-black text-white">Rp {calculateTotal().toLocaleString("id-ID")}</div>
+                  <div className="text-xs text-gray-500 uppercase tracking-widest">Total Tagihan</div>
+                  <div className="text-2xl font-black text-gray-900">Rp {calculateTotal().toLocaleString("id-ID")}</div>
                 </div>
               </div>
               
@@ -557,7 +557,7 @@ export default function ServicesPage() {
                 {/* Spareparts */}
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-lg text-white">Penggunaan Sparepart</h3>
+                    <h3 className="font-semibold text-lg text-gray-900">Penggunaan Sparepart</h3>
                     {selectedService.status !== 'selesai' && (
                       <button 
                         onClick={addSparepart}
@@ -569,17 +569,17 @@ export default function ServicesPage() {
                   </div>
                   
                   {spareparts.length === 0 ? (
-                    <div className="text-sm text-white/40 italic p-4 bg-white/5 rounded-xl text-center">Belum ada sparepart.</div>
+                    <div className="text-sm text-gray-500 italic p-4 bg-white shadow-sm rounded-xl text-center">Belum ada sparepart.</div>
                   ) : (
                     <div className="space-y-3">
                       {spareparts.map((item, index) => (
-                        <div key={index} className="flex flex-col sm:flex-row gap-3 items-end bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
+                        <div key={index} className="flex flex-col sm:flex-row gap-3 items-end bg-white shadow p-4 rounded-xl border border-gray-200">
                           <div className="flex-1 w-full">
-                            <label className="block text-xs text-white/40 mb-1">Pilih Barang dari Inventaris</label>
+                            <label className="block text-xs text-gray-500 mb-1">Pilih Barang dari Inventaris</label>
                             <select 
                               value={item.nama} onChange={(e) => updateSparepart(index, "nama", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 cursor-pointer"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50 cursor-pointer"
                             >
                               <option value="">-- Ketik manual atau pilih --</option>
                               {inventory.map(inv => (
@@ -596,33 +596,33 @@ export default function ServicesPage() {
                                 value={item.nama} 
                                 onChange={(e) => updateSparepart(index, "nama", e.target.value)}
                                 disabled={selectedService.status === 'selesai'}
-                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 mt-2"
+                                className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50 mt-2"
                                 placeholder="Nama barang custom..."
                               />
                             )}
                           </div>
                           <div className="w-full sm:w-32">
-                            <label className="block text-xs text-white/40 mb-1">Harga Modal</label>
+                            <label className="block text-xs text-gray-500 mb-1">Harga Modal</label>
                             <input 
                               type="number" value={item.harga_modal} onChange={(e) => updateSparepart(index, "harga_modal", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50"
                             />
                           </div>
                           <div className="w-full sm:w-32">
-                            <label className="block text-xs text-white/40 mb-1">Harga Jual</label>
+                            <label className="block text-xs text-gray-500 mb-1">Harga Jual</label>
                             <input 
                               type="number" value={item.harga_jual} onChange={(e) => updateSparepart(index, "harga_jual", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50"
                             />
                           </div>
                           <div className="w-full sm:w-20">
-                            <label className="block text-xs text-white/40 mb-1">Qty</label>
+                            <label className="block text-xs text-gray-500 mb-1">Qty</label>
                             <input 
                               type="number" value={item.qty} min={1} onChange={(e) => updateSparepart(index, "qty", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50 text-center"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50 text-center"
                             />
                           </div>
                           {selectedService.status !== 'selesai' && (
@@ -639,12 +639,12 @@ export default function ServicesPage() {
                   )}
                 </div>
 
-                <div className="h-px bg-white/10 w-full" />
+                <div className="h-px bg-white shadow-sm w-full" />
 
                 {/* Jasa / Layanan */}
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-lg text-white">Biaya Jasa</h3>
+                    <h3 className="font-semibold text-lg text-gray-900">Biaya Jasa</h3>
                     {selectedService.status !== 'selesai' && (
                       <button 
                         onClick={addJasa}
@@ -656,26 +656,26 @@ export default function ServicesPage() {
                   </div>
                   
                   {jasas.length === 0 ? (
-                    <div className="text-sm text-white/40 italic p-4 bg-white/5 rounded-xl text-center">Belum ada jasa ditambahkan.</div>
+                    <div className="text-sm text-gray-500 italic p-4 bg-white shadow-sm rounded-xl text-center">Belum ada jasa ditambahkan.</div>
                   ) : (
                     <div className="space-y-3">
                       {jasas.map((item, index) => (
-                        <div key={index} className="flex flex-col sm:flex-row gap-3 items-end bg-[#1A1A1A] p-4 rounded-xl border border-white/5">
+                        <div key={index} className="flex flex-col sm:flex-row gap-3 items-end bg-white shadow p-4 rounded-xl border border-gray-200">
                           <div className="flex-1 w-full">
-                            <label className="block text-xs text-white/40 mb-1">Nama Jasa</label>
+                            <label className="block text-xs text-gray-500 mb-1">Nama Jasa</label>
                             <input 
                               type="text" value={item.nama} onChange={(e) => updateJasa(index, "nama", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50"
                               placeholder="Misal: Turun Mesin"
                             />
                           </div>
                           <div className="w-full sm:w-40">
-                            <label className="block text-xs text-white/40 mb-1">Harga Jasa</label>
+                            <label className="block text-xs text-gray-500 mb-1">Harga Jasa</label>
                             <input 
                               type="number" value={item.harga} onChange={(e) => updateJasa(index, "harga", e.target.value)}
                               disabled={selectedService.status === 'selesai'}
-                              className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-[#E07A5F] outline-none disabled:opacity-50"
+                              className="w-full bg-black/40 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:border-[#E07A5F] outline-none disabled:opacity-50"
                             />
                           </div>
                           {selectedService.status !== 'selesai' && (
@@ -693,11 +693,11 @@ export default function ServicesPage() {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-white/10 bg-black/20 mt-auto">
+              <div className="p-6 border-t border-gray-200 bg-black/20 mt-auto">
                 {selectedService.status !== 'selesai' && (
                   <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
                     <h4 className="text-blue-400 font-bold mb-2">Preview Tagihan</h4>
-                    <div className="space-y-1 text-sm text-white/80">
+                    <div className="space-y-1 text-sm text-gray-900/80">
                       <div className="flex justify-between">
                         <span>Total Akhir Servis:</span>
                         <span className="font-mono">Rp {calculateTotal().toLocaleString('id-ID')}</span>
@@ -714,8 +714,8 @@ export default function ServicesPage() {
                           })()}
                         </span>
                       </div>
-                      <div className="h-px bg-white/10 my-2" />
-                      <div className="flex justify-between font-bold text-white">
+                      <div className="h-px bg-white shadow-sm my-2" />
+                      <div className="flex justify-between font-bold text-gray-900">
                         <span>Sisa Tagihan Customer:</span>
                         <span className="text-[#E07A5F]">
                           Rp {(() => {
@@ -736,7 +736,7 @@ export default function ServicesPage() {
                 <div className="flex gap-3 justify-end">
                   <button 
                     onClick={() => setIsEditModalOpen(false)}
-                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-white shadow-sm transition-colors"
                   >
                     Tutup
                   </button>
@@ -745,14 +745,14 @@ export default function ServicesPage() {
                       <button 
                         onClick={() => handleSave(false)}
                         disabled={saving}
-                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-colors disabled:opacity-50"
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-white shadow-sm hover:bg-white/20 text-gray-900 transition-colors disabled:opacity-50"
                       >
                         {saving ? "Menyimpan..." : "Simpan Draft"}
                       </button>
                       <button 
                         onClick={() => handleSave(true)}
                         disabled={saving}
-                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-500 text-white transition-colors disabled:opacity-50 flex items-center gap-2"
+                        className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-green-600 hover:bg-green-500 text-gray-900 transition-colors disabled:opacity-50 flex items-center gap-2"
                       >
                         <CheckCircle2 className="w-4 h-4" /> Selesai & Buat Tagihan
                       </button>
@@ -768,3 +768,5 @@ export default function ServicesPage() {
     </motion.div>
   );
 }
+
+

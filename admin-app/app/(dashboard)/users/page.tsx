@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Edit2, ShieldAlert, CheckCircle2, Ban, UserCog } from "lucide-react";
+import { Search, Edit2, ShieldAlert, CheckCircle2, Ban, UserCog, Wrench } from "lucide-react";
 
 type User = {
   id: string;
@@ -171,6 +171,7 @@ export default function UsersPage() {
           <option className="bg-[#121212]" value="all">Semua Peran</option>
           <option className="bg-[#121212]" value="customer">Customer</option>
           <option className="bg-[#121212]" value="kasir">Kasir</option>
+          <option className="bg-[#121212]" value="mekanik">Mekanik</option>
           <option className="bg-[#121212]" value="admin">Admin</option>
         </select>
       </div>
@@ -211,10 +212,12 @@ export default function UsersPage() {
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
                         user.role === 'admin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                        user.role === 'mekanik' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
                         user.role === 'kasir' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
                         'bg-gray-500/20 text-gray-400 border border-gray-500/30'
                       }`}>
                         {user.role === 'admin' && <ShieldAlert className="w-3 h-3" />}
+                        {user.role === 'mekanik' && <Wrench className="w-3 h-3" />}
                         {user.role === 'kasir' && <UserCog className="w-3 h-3" />}
                         {user.role}
                       </span>
@@ -280,6 +283,7 @@ export default function UsersPage() {
                   >
                     <option className="bg-[#121212]" value="customer">Customer (Pelanggan Biasa)</option>
                     <option className="bg-[#121212]" value="kasir">Kasir (Akses Transaksi)</option>
+                    <option className="bg-[#121212]" value="mekanik">Mekanik (Akses Servis)</option>
                     <option className="bg-[#121212]" value="admin">Admin (Akses Penuh)</option>
                   </select>
                 </div>
@@ -395,6 +399,7 @@ export default function UsersPage() {
                     className="w-full bg-[#1A1A1A] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#E07A5F] transition-colors cursor-pointer"
                   >
                     <option className="bg-[#121212]" value="kasir">Kasir (Akses Transaksi)</option>
+                    <option className="bg-[#121212]" value="mekanik">Mekanik (Akses Servis)</option>
                     <option className="bg-[#121212]" value="admin">Admin (Akses Penuh)</option>
                     <option className="bg-[#121212]" value="customer">Pelanggan Offline</option>
                   </select>

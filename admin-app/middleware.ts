@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage = path.startsWith("/login");
+  const isAuthPage = path.startsWith("/login") || path.startsWith("/kasir-login") || path.startsWith("/mekanik-login");
   
   // Jika belum login, hanya boleh akses halaman login
   if (!user && !isAuthPage) {
@@ -59,6 +59,7 @@ export async function middleware(request: NextRequest) {
     const isStaff = 
       profile?.role === "admin" || 
       profile?.role === "kasir" || 
+      profile?.role === "mekanik" ||
       user.email === "admin@autocraft.com" ||
       user.email === "admin@gmail.com";
 
@@ -71,10 +72,16 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(redirectUrl);
       }
     } else {
-      // Jika staff mengakses halaman login, arahkan ke dashboard
+      // Jika staff mengakses halaman login, arahkan ke dashboard masing-masing
       if (isAuthPage) {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = "/";
+        if (profile?.role === "mekanik") {
+          redirectUrl.pathname = "/mekanik/dashboard";
+        } else if (profile?.role === "kasir") {
+          redirectUrl.pathname = "/kasir/dashboard";
+        } else {
+          redirectUrl.pathname = "/";
+        }
         return NextResponse.redirect(redirectUrl);
       }
     }
