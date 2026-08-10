@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { faqs } from "@/data/dummy";
-import { Plus, Minus } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 export default function FAQAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
@@ -28,22 +28,41 @@ export default function FAQAccordion() {
           {faqs.map((faq, index) => {
             const isOpen = openIndex === index;
             return (
-              <div 
+              <div
                 key={index}
-                className={`border rounded-2xl transition-all duration-300 ${isOpen ? "bg-[#1A1A1A] border-[#E07A5F]/30" : "bg-transparent border-white/10 hover:border-white/20"}`}
+                className={`border rounded-2xl transition-all duration-300 ${
+                  isOpen
+                    ? "bg-[#1A1A1A] border-[#E07A5F]/30"
+                    : "bg-transparent border-white/10 hover:border-white/20"
+                }`}
               >
-                <button 
+                <button
                   onClick={() => toggle(index)}
                   className="w-full flex items-center justify-between p-6 text-left"
                 >
-                  <span className={`font-bold text-base sm:text-lg pr-8 ${isOpen ? "text-[#E07A5F]" : "text-white"}`}>
+                  <span
+                    className={`font-bold text-base sm:text-lg pr-8 ${
+                      isOpen ? "text-[#E07A5F]" : "text-white"
+                    }`}
+                  >
                     {faq.question}
                   </span>
-                  <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isOpen ? "bg-[#E07A5F] text-black" : "bg-white/5 text-white"}`}>
-                    {isOpen ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+
+                  <div
+                    className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      isOpen
+                        ? "bg-[#E07A5F] text-black"
+                        : "bg-white/5 text-white"
+                    }`}
+                  >
+                    {isOpen ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
                   </div>
                 </button>
-                
+
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div

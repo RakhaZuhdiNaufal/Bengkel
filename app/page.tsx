@@ -9,7 +9,6 @@ import WhyChooseUs from "@/components/WhyChooseUs";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
 import ArticleGrid from "@/components/ArticleGrid";
 import FAQAccordion from "@/components/FAQAccordion";
-import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -127,45 +126,6 @@ export default function Home() {
       desc: "Jaga performa kendaraan tetap aman untuk pemakaian harian.",
       image:
         "https://i.pinimg.com/vwebp/736x/63/78/7c/63787c7668494f20badd8b71d83cedd3.webp",
-    },
-  ];
-
-  const features = [
-    {
-      num: 1,
-      title: "Garansi Presisi & Kualitas Utama",
-      desc: "Setiap pengerjaan melalui kontrol kualitas berlapis berstandar manufaktur untuk memastikan keandalan mutlak.",
-      side: "right",
-    },
-    {
-      num: 2,
-      title: "Teknologi Diagnostik Terkini",
-      desc: "Penggunaan scanner komputer dan alat pengujian canggih berstandar internasional untuk analisis akurat tanpa spekulasi.",
-      side: "left",
-    },
-    {
-      num: 3,
-      title: "Teknisi Sertifikasi Spesialis",
-      desc: "Ditangani langsung oleh tim ahli berpengalaman yang terus diperbarui dengan standar teknik otomotif modern.",
-      side: "right",
-    },
-    {
-      num: 4,
-      title: "Optimasi Performa Aman Harian",
-      desc: "Peningkatan tenaga dan efisiensi kendaraan dirancang seimbang tanpa mengorbankan kenyamanan pemakaian sehari-hari.",
-      side: "left",
-    },
-    {
-      num: 5,
-      title: "Transparansi Estimasi & Pengerjaan",
-      desc: "Laporan pengerjaan rinci beserta dokumentasi lengkap tanpa ada biaya tersembunyi selama proses perbaikan.",
-      side: "right",
-    },
-    {
-      num: 6,
-      title: "Suku Cadang & Komponen Original",
-      desc: "Jaminan ketersediaan sparepart asli dan suku cadang berperforma tinggi berkualitas OEM teruji.",
-      side: "left",
     },
   ];
 
@@ -411,9 +371,27 @@ export default function Home() {
                     </div>
 
                     <div className="relative space-y-1 px-1 pb-1 grow flex flex-col justify-end">
-                      <h3 className="font-extrabold text-[13px] text-[#111111] group-hover:text-white transition-colors duration-300 leading-snug tracking-tight line-clamp-1">
-                        {card.title}
-                      </h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-extrabold text-[13px] text-[#111111] group-hover:text-white transition-colors duration-300 leading-snug tracking-tight line-clamp-1">
+                          {card.title}
+                        </h3>
+                        {/* ICON PLUS DIGANTI DENGAN ICON > (PLUS KODE SVG PANAH KANAN) */}
+                        <div className="w-6 h-6 rounded-full bg-black/10 group-hover:bg-white/20 flex items-center justify-center shrink-0 transition-colors">
+                          <svg
+                            className="w-3.5 h-3.5 text-[#111111] group-hover:text-white transition-colors"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </div>
+                      </div>
                       <p className="text-[11px] text-[#666666] group-hover:text-white/70 transition-colors duration-300 leading-relaxed line-clamp-2 font-normal">
                         {card.desc}
                       </p>
@@ -428,23 +406,30 @@ export default function Home() {
         {/* KEUNGGULAN KAMI */}
         <WhyChooseUs />
 
-        {/* PETA JARINGAN CABANG */}
-        <IndonesiaMapSection />
+        {/* BLOG & TIPS */}
+        <div className="border-t border-white/10">
+          <ArticleGrid />
+        </div>
 
         {/* ULASAN PELANGGAN */}
-        <TestimonialCarousel />
-
-        {/* BLOG & TIPS */}
-        <ArticleGrid />
+        <div className="border-t border-white/10">
+          <TestimonialCarousel />
+        </div>
 
         {/* FAQ ACCORDION */}
-        <FAQAccordion />
+        <div className="border-t border-white/10">
+          <FAQAccordion />
+        </div>
 
-        {/* CALL TO ACTION */}
-        <CTA />
+        {/* PETA JARINGAN CABANG */}
+        <div className="border-t border-white/10">
+          <IndonesiaMapSection />
+        </div>
 
         {/* FOOTER */}
-        <Footer />
+        <div className="border-t border-white/10">
+          <Footer />
+        </div>
       </div>
     </div>
   );
