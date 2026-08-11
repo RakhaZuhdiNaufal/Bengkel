@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import QuickBooking from "@/components/QuickBooking";
 import PopularServices from "@/components/PopularServices";
@@ -20,20 +20,30 @@ import {
   MoreHorizontal,
   Search,
   X,
-  CreditCard
+  CreditCard,
+  ArrowRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
+interface PendingDepositType {
+  id: string;
+  total?: number;
+  metode?: string;
+  status?: string;
+  bookings?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export default function HomePage() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState("Beranda");
   const [searchQuery, setSearchQuery] = useState("");
   const [lang, setLang] = useState("ID");
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
-  const [pendingDeposit, setPendingDeposit] = useState<any>(null);
+  const [pendingDeposit, setPendingDeposit] =
+    useState<PendingDepositType | null>(null);
 
   const supabase = createClient();
-
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const navMenus = [
@@ -70,66 +80,48 @@ export default function HomePage() {
     {
       id: 1,
       title: "ECU Remap & Dyno Tuning",
-      description:
-        "Maksimalkan tenaga dan respons mesin dengan tuning presisi tinggi.",
-      image:
-        "https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?q=80&w=1200&auto=format&fit=crop",
+      image: "Home/Dyno.png",
       align: "left",
     },
     {
       id: 2,
       title: "Performance Upgrade & Parts",
-      description:
-        "Suku cadang original dan berkualitas tinggi untuk performa maksimal.",
-      image:
-        "https://images.unsplash.com/photo-1580273916550-e323be2ae537?q=80&w=1200&auto=format&fit=crop",
+      image: "Home/Barang.png",
       align: "right",
     },
     {
       id: 3,
       title: "Professional Detailing & Coating",
-      description:
-        "Lindungi cat kendaraan Anda agar tetap mengkilap dan tahan lama.",
-      image:
-        "https://images.unsplash.com/photo-1607860108855-64b2078675c1?q=80&w=1200&auto=format&fit=crop",
+      image: "Home/Coating.png",
       align: "left",
     },
     {
       id: 4,
       title: "Suspension & Handling Tuning",
-      description:
-        "Kenyamanan dan kestabilan berkendara di setiap medan jalan.",
-      image:
-        "https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=1200&auto=format&fit=crop",
+      image: "Home/Tuning.png",
       align: "right",
     },
   ];
 
-  const promoSlides = [
+  const discountSlides = [
     {
       id: 1,
-      badge: "PROMO BULAN INI",
-      title: "PAKET SERVIS RUTIN + COATING",
-      discount: "DISKON 30%",
-      buttonText: "AMBIL PROMO",
-      bgGradient: "from-[#2A2A2A] via-[#1E1E1E] to-[#121212]",
-      image:
-        "https://images.unsplash.com/photo-1502877336475-76753f602dc1?q=80&w=600&auto=format&fit=crop",
+      title: "EXTRA UP TO 70% OFF",
+      subtitle: "INDONESIA'S INDEPENDENCE CELEBRATION",
+      badge: "8.8 SALE",
+      image: "Home/Barang.png",
     },
     {
       id: 2,
-      badge: "FLASH SALE WEEKEND",
-      title: "UPGRADE BRAKE KIT & EXHAUST",
-      discount: "CASHBACK RP 1.5JT",
-      buttonText: "BOOKING SEKARANG",
-      bgGradient: "from-[#2A2A2A] via-[#1E1E1E] to-[#121212]",
-      image:
-        "https://images.unsplash.com/photo-1600793575654-910699b5e4d4?q=80&w=600&auto=format&fit=crop",
+      title: "SPECIAL FLASH SALE 50%",
+      subtitle: "EXPRESS MAINTENANCE PACK",
+      badge: "50% OFF",
+      image: "Home/Dyno.png",
     },
   ];
 
   const [currentMain, setCurrentMain] = useState(0);
-  const [currentPromo, setCurrentPromo] = useState(0);
+  const [currentDiscount, setCurrentDiscount] = useState(0);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -141,10 +133,11 @@ export default function HomePage() {
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    
-    // Fetch pending deposit
+
     const checkPendingDeposit = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data } = await supabase
           .from("payments")
@@ -154,30 +147,34 @@ export default function HomePage() {
           .eq("status", "pending")
           .limit(1)
           .single();
-        if (data) setPendingDeposit(data);
+        if (data) setPendingDeposit(data as PendingDepositType);
       }
     };
     checkPendingDeposit();
 
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const timerMain = setInterval(() => {
       setCurrentMain((prev) => (prev + 1) % mainSlides.length);
     }, 6000);
-    const timerPromo = setInterval(() => {
-      setCurrentPromo((prev) => (prev + 1) % promoSlides.length);
-    }, 5000);
     return () => {
       clearInterval(timerMain);
-      clearInterval(timerPromo);
     };
-  }, [mainSlides.length, promoSlides.length]);
+  }, [mainSlides.length]);
+
+  useEffect(() => {
+    const timerDiscount = setInterval(() => {
+      setCurrentDiscount((prev) => (prev + 1) % discountSlides.length);
+    }, 6000);
+    return () => {
+      clearInterval(timerDiscount);
+    };
+  }, [discountSlides.length]);
 
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex flex-col font-sans relative">
-      {/* Header Utama / Search Bar */}
       <header className="sticky top-0 z-50 bg-[#121212]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-8">
@@ -227,7 +224,7 @@ export default function HomePage() {
                 {profile?.nama
                   ? profile.nama
                       .split(" ")
-                      .map((n) => n[0])
+                      .map((n: string) => n[0])
                       .join("")
                       .substring(0, 2)
                       .toUpperCase()
@@ -238,10 +235,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Sub-Navbar dengan Dropdown Produk */}
       <nav
         ref={dropdownRef}
-        className="bg-black border-b border-white/10 px-4 sm:px-8 py-5 sticky top-[73px] z-40 bg-black/95 backdrop-blur"
+        className="bg-black px-4 sm:px-8 py-5 sticky top-[73px] z-40 bg-black/95 backdrop-blur"
       >
         <div className="max-w-7xl mx-auto flex items-center justify-center gap-6 sm:gap-8 text-xs font-bold uppercase tracking-wider whitespace-nowrap relative overflow-x-auto scrollbar-none">
           {navMenus.map((menu) => {
@@ -318,7 +314,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Dropdown Menu Produk */}
         <AnimatePresence>
           {isProductDropdownOpen && (
             <motion.div
@@ -347,10 +342,9 @@ export default function HomePage() {
         </AnimatePresence>
       </nav>
 
-      {/* Konten Utama */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-10">
-        {/* Banner Slider Utama */}
-        <section className="relative overflow-hidden rounded-3xl min-h-[520px] sm:min-h-[620px] flex items-center shadow-xl">
+        {/* 1. Main Carousel Section */}
+        <section className="relative overflow-hidden rounded-3xl min-h-[360px] sm:min-h-[440px] flex items-center shadow-xl">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentMain}
@@ -358,7 +352,7 @@ export default function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="absolute inset-0 flex items-start p-8 sm:p-16"
+              className="absolute inset-0 flex items-start p-6 sm:p-12"
             >
               <img
                 src={mainSlides[currentMain].image}
@@ -374,12 +368,9 @@ export default function HomePage() {
                     : "mr-auto text-left"
                 }`}
               >
-                <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight drop-shadow-md">
+                <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-md">
                   {mainSlides[currentMain].title}
                 </h1>
-                <p className="text-white/90 text-sm sm:text-base leading-snug drop-shadow">
-                  {mainSlides[currentMain].description}
-                </p>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -390,7 +381,7 @@ export default function HomePage() {
                 (prev) => (prev - 1 + mainSlides.length) % mainSlides.length,
               )
             }
-            className="absolute left-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer text-sm"
           >
             ❮
           </button>
@@ -398,32 +389,118 @@ export default function HomePage() {
             onClick={() =>
               setCurrentMain((prev) => (prev + 1) % mainSlides.length)
             }
-            className="absolute right-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center hover:bg-neutral-700 transition cursor-pointer text-sm"
           >
             ❯
           </button>
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
             {mainSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentMain(idx)}
-                className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                  currentMain === idx
-                    ? "w-10 bg-amber-400"
-                    : "w-2.5 bg-white/50"
+                className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentMain === idx ? "w-8 bg-amber-400" : "w-2 bg-white/50"
                 }`}
               />
             ))}
           </div>
         </section>
 
-        {/* Fitur Utama Dashboard */}
+        {/* 2. Diskon Slider Sesuai Style Gambar Pertama (Full Lebar Card Background dengan Layout Gambar di Kanan) */}
+        <section className="relative overflow-hidden rounded-3xl bg-[#d5ded9] text-[#2c224e] shadow-xl h-[180px] sm:h-[210px] flex items-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentDiscount}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0 grid grid-cols-1 md:grid-cols-12 items-center px-6 sm:px-12 gap-6 w-full"
+            >
+              {/* Bagian Kiri: Teks Diskon */}
+              <div className="relative z-10 md:col-span-7 flex flex-col justify-center space-y-1 pr-2">
+                <span className="text-[9px] sm:text-[11px] font-black tracking-widest uppercase text-[#3b2874]">
+                  {discountSlides[currentDiscount].subtitle}
+                </span>
+                <h2 className="text-xl sm:text-3xl font-black tracking-tight text-[#3b2874] uppercase leading-tight">
+                  {discountSlides[currentDiscount].title}
+                </h2>
+                <div className="pt-0.5 flex flex-wrap items-center gap-2">
+                  <span className="text-lg sm:text-2xl font-black tracking-tighter text-[#3b2874]">
+                    {discountSlides[currentDiscount].badge}
+                  </span>
+                  <span className="text-[10px] font-medium text-neutral-800 leading-tight">
+                    S&K berlaku. Gratis servis & pengecekan berkala
+                    se-Indonesia.
+                  </span>
+                </div>
+              </div>
+
+              {/* Bagian Kanan: Gambar Banner di dalam Card seperti gambar pertama */}
+              <div className="relative z-10 md:col-span-5 w-full h-28 sm:h-36 rounded-2xl overflow-hidden shadow-lg border border-black/10">
+                <img
+                  src={discountSlides[currentDiscount].image}
+                  alt="Discount Banner"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
+                <div className="absolute inset-0 bg-black/10" />
+              </div>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Tombol Navigasi Kiri */}
+          <button
+            onClick={() =>
+              setCurrentDiscount(
+                (prev) =>
+                  (prev - 1 + discountSlides.length) % discountSlides.length,
+              )
+            }
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition cursor-pointer text-xs shadow"
+          >
+            ❮
+          </button>
+
+          {/* Tombol Navigasi Kanan (Disesuaikan posisinya agar tidak tertutup tombol Shop Now) */}
+          <button
+            onClick={() =>
+              setCurrentDiscount((prev) => (prev + 1) % discountSlides.length)
+            }
+            className="absolute right-12 top-1/2 -translate-y-1/2 z-20 w-7 h-7 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition cursor-pointer text-xs shadow"
+          >
+            ❯
+          </button>
+
+          {/* Indikator Titik */}
+          <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+            {discountSlides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentDiscount(idx)}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentDiscount === idx
+                    ? "w-5 bg-[#3b2874]"
+                    : "w-1.5 bg-[#3b2874]/40"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Tombol Shop Now Vertikal di Ujung Kanan */}
+          <Link
+            href="/promosi"
+            className="absolute right-0 top-0 bottom-0 bg-black text-white px-3 flex items-center gap-1 font-bold tracking-widest text-[9px] uppercase hover:bg-neutral-800 transition z-20"
+            style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+          >
+            SHOP NOW <ArrowRight className="w-2.5 h-2.5 rotate-90" />
+          </Link>
+        </section>
+
+        {/* 3. QuickBooking Section */}
         <QuickBooking />
 
-        {/* Banner Reminder & Empty State (Customer Dashboard) */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
           {pendingDeposit ? (
             <div className="bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30 rounded-3xl p-6 flex items-center gap-4 hover:border-yellow-500/50 transition shadow-lg relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -438,8 +515,19 @@ export default function HomePage() {
                   </span>
                   Tagihan Deposit Menunggu
                 </h3>
-                <p className="text-sm text-yellow-500/80">Anda memiliki tagihan deposit sebesar <span className="font-bold text-yellow-400">Rp {pendingDeposit.total?.toLocaleString("id-ID")}</span> yang harus dibayar.</p>
-                <Link href="/riwayat" className="inline-block mt-3 text-xs font-bold text-yellow-400 hover:text-white transition uppercase tracking-wider">Bayar Sekarang →</Link>
+                <p className="text-sm text-yellow-500/80">
+                  Anda memiliki tagihan deposit sebesar{" "}
+                  <span className="font-bold text-yellow-400">
+                    Rp {(pendingDeposit.total ?? 0).toLocaleString("id-ID")}
+                  </span>{" "}
+                  yang harus dibayar.
+                </p>
+                <Link
+                  href="/riwayat"
+                  className="inline-block mt-3 text-xs font-bold text-yellow-400 hover:text-white transition uppercase tracking-wider"
+                >
+                  Bayar Sekarang →
+                </Link>
               </div>
             </div>
           ) : (
@@ -448,18 +536,36 @@ export default function HomePage() {
                 <ShieldAlert className="w-6 h-6 text-red-500" />
               </div>
               <div>
-                <h3 className="text-white font-bold mb-1">Jadwal Servis Terlewat!</h3>
-                <p className="text-sm text-white/50">Porsche 911 GT3 RS Anda sudah melewati batas waktu servis rutin bulanan.</p>
-                <Link href="/booking" className="inline-block mt-3 text-xs font-bold text-[#E07A5F] hover:text-white transition uppercase tracking-wider">Jadwalkan Sekarang →</Link>
+                <h3 className="text-white font-bold mb-1">
+                  Jadwal Servis Terlewat!
+                </h3>
+                <p className="text-sm text-white/50">
+                  Porsche 911 GT3 RS Anda sudah melewati batas waktu servis
+                  rutin bulanan.
+                </p>
+                <Link
+                  href="/booking"
+                  className="inline-block mt-3 text-xs font-bold text-[#E07A5F] hover:text-white transition uppercase tracking-wider"
+                >
+                  Jadwalkan Sekarang →
+                </Link>
               </div>
             </div>
           )}
-          
+
           <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 flex flex-col justify-center text-center hover:border-white/30 transition shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#E07A5F]/5 rounded-full blur-2xl pointer-events-none" />
-            <h3 className="text-white font-bold mb-2">Ingin memantau kendaraan?</h3>
-            <p className="text-sm text-white/50 mb-4">Tambahkan data kendaraan Anda untuk mendapatkan pengingat servis otomatis.</p>
-            <Link href="/akun" className="text-xs font-bold bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl border border-white/10 transition mx-auto flex items-center gap-2">
+            <h3 className="text-white font-bold mb-2">
+              Ingin memantau kendaraan?
+            </h3>
+            <p className="text-sm text-white/50 mb-4">
+              Tambahkan data kendaraan Anda untuk mendapatkan pengingat servis
+              otomatis.
+            </p>
+            <Link
+              href="/akun"
+              className="text-xs font-bold bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl border border-white/10 transition mx-auto flex items-center gap-2"
+            >
               <span className="text-[#E07A5F] text-lg">+</span> Tambah Garasi
             </Link>
           </div>
@@ -469,7 +575,6 @@ export default function HomePage() {
         <PromoSlider />
         <CostEstimator />
         <CTA />
-
       </main>
 
       <Footer />

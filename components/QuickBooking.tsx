@@ -30,7 +30,7 @@ export default function QuickBooking() {
   };
 
   return (
-    <section className="relative z-20 -mt-20 mx-auto max-w-7xl px-4 sm:px-8 mb-20">
+    <section className="relative z-20 mt-10 sm:mt-12 mx-auto max-w-7xl px-4 sm:px-8 mb-20">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -220,9 +220,12 @@ export default function QuickBooking() {
               <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Booking Berhasil!</h3>
+              <h3 className="text-xl font-bold text-white mb-2">
+                Booking Berhasil!
+              </h3>
               <p className="text-sm text-white/70 mb-6">
-                Jadwal servis Anda telah dikonfirmasi. Kami akan menghubungi Anda segera.
+                Jadwal servis Anda telah dikonfirmasi. Kami akan menghubungi
+                Anda segera.
               </p>
               <button
                 onClick={() => setShowModal(false)}
