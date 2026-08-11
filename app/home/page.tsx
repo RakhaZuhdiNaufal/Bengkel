@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import QuickBooking from "@/components/QuickBooking";
-import PopularServices from "@/components/PopularServices";
 import PromoSlider from "@/components/PromoSlider";
 import CostEstimator from "@/components/CostEstimator";
 import CTA from "@/components/CTA";
@@ -22,6 +21,12 @@ import {
   X,
   CreditCard,
   ArrowRight,
+  Wrench,
+  Cpu,
+  Zap,
+  Layers,
+  Star,
+  Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -75,6 +80,163 @@ export default function HomePage() {
       icon: <MoreHorizontal className="w-7 h-7 text-amber-400" />,
     },
   ];
+
+  const serviceCategoriesMap = [
+    {
+      id: "semua",
+      name: "Semua Servis",
+      icon: <Wrench className="w-4 h-4 text-amber-400" />,
+      count: "24",
+      items: [
+        {
+          title: "Ganti Oli Premium",
+          rating: "4.9",
+          reviews: "(128)",
+          estimasi: "45 Menit",
+          harga: "Rp950.000",
+          image: "Home/Barang.png",
+        },
+        {
+          title: "General Tune Up",
+          rating: "4.8",
+          reviews: "(94)",
+          estimasi: "2 Jam",
+          harga: "Rp1.500.000",
+          image: "Home/Dyno.png",
+        },
+        {
+          title: "Spooring & Balancing",
+          rating: "4.7",
+          reviews: "(210)",
+          estimasi: "1 Jam",
+          harga: "Rp600.000",
+          image: "Home/Tuning.png",
+        },
+        {
+          title: "Servis AC Total",
+          rating: "4.9",
+          reviews: "(85)",
+          estimasi: "2.5 Jam",
+          harga: "Rp1.200.000",
+          image: "Home/Coating.png",
+        },
+        {
+          title: "Premium Auto Detailing",
+          rating: "5.0",
+          reviews: "(320)",
+          estimasi: "1 Hari",
+          harga: "Rp3.500.000",
+          image: "Home/Barang.png",
+        },
+        {
+          title: "ECU Remap & Tuning",
+          rating: "4.9",
+          reviews: "(150)",
+          estimasi: "3 Jam",
+          harga: "Rp5.500.000",
+          image: "Home/Dyno.png",
+        },
+      ],
+    },
+    {
+      id: "engine",
+      name: "Engine Tune Up",
+      icon: <Zap className="w-4 h-4 text-amber-400" />,
+      count: "6",
+      items: [
+        {
+          title: "General Tune Up",
+          rating: "4.8",
+          reviews: "(94)",
+          estimasi: "2 Jam",
+          harga: "Rp1.500.000",
+          image: "Home/Dyno.png",
+        },
+        {
+          title: "ECU Remap & Tuning",
+          rating: "4.9",
+          reviews: "(150)",
+          estimasi: "3 Jam",
+          harga: "Rp5.500.000",
+          image: "Home/Dyno.png",
+        },
+      ],
+    },
+    {
+      id: "ecu",
+      name: "ECU & Dyno",
+      icon: <Cpu className="w-4 h-4 text-amber-400" />,
+      count: "4",
+      items: [
+        {
+          title: "ECU Remap & Tuning",
+          rating: "4.9",
+          reviews: "(150)",
+          estimasi: "3 Jam",
+          harga: "Rp5.500.000",
+          image: "Home/Dyno.png",
+        },
+      ],
+    },
+    {
+      id: "kaki",
+      name: "Kaki-Kaki",
+      icon: <Activity className="w-4 h-4 text-amber-400" />,
+      count: "5",
+      items: [
+        {
+          title: "Spooring & Balancing",
+          rating: "4.7",
+          reviews: "(210)",
+          estimasi: "1 Jam",
+          harga: "Rp600.000",
+          image: "Home/Tuning.png",
+        },
+      ],
+    },
+    {
+      id: "oli-ac",
+      name: "Ganti Oli & AC",
+      icon: <Droplet className="w-4 h-4 text-amber-400" />,
+      count: "5",
+      items: [
+        {
+          title: "Ganti Oli Premium",
+          rating: "4.9",
+          reviews: "(128)",
+          estimasi: "45 Menit",
+          harga: "Rp950.000",
+          image: "Home/Barang.png",
+        },
+        {
+          title: "Servis AC Total",
+          rating: "4.9",
+          reviews: "(85)",
+          estimasi: "2.5 Jam",
+          harga: "Rp1.200.000",
+          image: "Home/Coating.png",
+        },
+      ],
+    },
+    {
+      id: "detailing",
+      name: "Detailing & Coating",
+      icon: <Layers className="w-4 h-4 text-amber-400" />,
+      count: "4",
+      items: [
+        {
+          title: "Premium Auto Detailing",
+          rating: "5.0",
+          reviews: "(320)",
+          estimasi: "1 Hari",
+          harga: "Rp3.500.000",
+          image: "Home/Barang.png",
+        },
+      ],
+    },
+  ];
+
+  const [selectedCategory, setSelectedCategory] = useState("semua");
 
   const mainSlides = [
     {
@@ -172,6 +334,10 @@ export default function HomePage() {
       clearInterval(timerDiscount);
     };
   }, [discountSlides.length]);
+
+  const activeCategoryData =
+    serviceCategoriesMap.find((cat) => cat.id === selectedCategory) ||
+    serviceCategoriesMap[0];
 
   return (
     <div className="min-h-screen bg-black text-[#F4F1DE] flex flex-col font-sans relative">
@@ -342,8 +508,9 @@ export default function HomePage() {
         </AnimatePresence>
       </nav>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-10">
-        {/* 1. Main Carousel Section */}
+      {/* Konten Utama Terpusat Full Lebar untuk Banner Atas & Diskon */}
+      <div className="max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-10">
+        {/* 1. Main Carousel Section (Full Lebar) */}
         <section className="relative overflow-hidden rounded-3xl min-h-[360px] sm:min-h-[440px] flex items-center shadow-xl">
           <AnimatePresence mode="wait">
             <motion.div
@@ -407,7 +574,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 2. Diskon Slider Sesuai Style Gambar Pertama (Full Lebar Card Background dengan Layout Gambar di Kanan) */}
+        {/* 2. Diskon Slider (Full Lebar) */}
         <section className="relative overflow-hidden rounded-3xl bg-[#d5ded9] text-[#2c224e] shadow-xl h-[180px] sm:h-[210px] flex items-center">
           <AnimatePresence mode="wait">
             <motion.div
@@ -418,7 +585,6 @@ export default function HomePage() {
               transition={{ duration: 0.4 }}
               className="absolute inset-0 grid grid-cols-1 md:grid-cols-12 items-center px-6 sm:px-12 gap-6 w-full"
             >
-              {/* Bagian Kiri: Teks Diskon */}
               <div className="relative z-10 md:col-span-7 flex flex-col justify-center space-y-1 pr-2">
                 <span className="text-[9px] sm:text-[11px] font-black tracking-widest uppercase text-[#3b2874]">
                   {discountSlides[currentDiscount].subtitle}
@@ -437,7 +603,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Bagian Kanan: Gambar Banner di dalam Card seperti gambar pertama */}
               <div className="relative z-10 md:col-span-5 w-full h-28 sm:h-36 rounded-2xl overflow-hidden shadow-lg border border-black/10">
                 <img
                   src={discountSlides[currentDiscount].image}
@@ -449,7 +614,6 @@ export default function HomePage() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Tombol Navigasi Kiri */}
           <button
             onClick={() =>
               setCurrentDiscount(
@@ -462,7 +626,6 @@ export default function HomePage() {
             ❮
           </button>
 
-          {/* Tombol Navigasi Kanan (Disesuaikan posisinya agar tidak tertutup tombol Shop Now) */}
           <button
             onClick={() =>
               setCurrentDiscount((prev) => (prev + 1) % discountSlides.length)
@@ -472,7 +635,6 @@ export default function HomePage() {
             ❯
           </button>
 
-          {/* Indikator Titik */}
           <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
             {discountSlides.map((_, idx) => (
               <button
@@ -487,7 +649,6 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Tombol Shop Now Vertikal di Ujung Kanan */}
           <Link
             href="/promosi"
             className="absolute right-0 top-0 bottom-0 bg-black text-white px-3 flex items-center gap-1 font-bold tracking-widest text-[9px] uppercase hover:bg-neutral-800 transition z-20"
@@ -497,8 +658,157 @@ export default function HomePage() {
           </Link>
         </section>
 
-        {/* 3. QuickBooking Section */}
-        <QuickBooking />
+        {/* 3. LAYOUT KHUSUS: Kategori di Samping Katalog Servis (Tepat Sejajar) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Kolom Kiri: Kategori Layanan */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="bg-[#121212] border border-white/10 rounded-2xl p-4 shadow-xl">
+              <div className="flex items-center gap-2 pb-3 mb-3 border-b border-white/10">
+                <span className="text-amber-400 text-sm font-bold">⚙️</span>
+                <h3 className="text-white font-extrabold text-xs tracking-wide uppercase">
+                  KATEGORI LAYANAN
+                </h3>
+              </div>
+
+              <ul className="space-y-1">
+                {serviceCategoriesMap.map((cat) => {
+                  const isSelected = selectedCategory === cat.id;
+                  return (
+                    <li key={cat.id}>
+                      <button
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition group text-left cursor-pointer border ${
+                          isSelected
+                            ? "bg-amber-400/10 border-amber-400 text-amber-400"
+                            : "bg-[#1A1A1A]/50 hover:bg-neutral-800 text-white/80 hover:text-white border-transparent hover:border-white/10"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 ${
+                              isSelected
+                                ? "bg-amber-400/20 text-amber-400"
+                                : "bg-black/60 text-white"
+                            }`}
+                          >
+                            {cat.icon}
+                          </div>
+                          <span className="text-[11px] font-bold tracking-tight">
+                            {cat.name}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                            isSelected
+                              ? "bg-amber-400 text-black font-extrabold"
+                              : "bg-white/5 text-white/40 group-hover:text-white"
+                          }`}
+                        >
+                          {cat.count}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 rounded-xl p-3 text-center">
+                  <p className="text-[10px] font-bold text-amber-400 mb-1">
+                    Butuh Konsultasi Khusus?
+                  </p>
+                  <p className="text-[9px] text-white/50 mb-2 leading-tight">
+                    Diskusikan modifikasi atau masalah mesin Anda dengan teknisi
+                    ahli kami.
+                  </p>
+                  <Link
+                    href="/booking"
+                    className="block w-full py-1.5 bg-amber-400 hover:bg-amber-500 text-black font-extrabold text-[10px] rounded-lg transition shadow"
+                  >
+                    Hubungi Teknisi
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Kolom Kanan: Katalog Servis / Layanan Populer Dinamis */}
+          <div className="lg:col-span-9 space-y-6">
+            <div className="flex items-end justify-between border-b border-white/10 pb-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-400 mb-1">
+                  KATALOG SERVIS
+                </p>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {activeCategoryData.name}
+                </h2>
+              </div>
+              <Link
+                href="/booking"
+                className="text-xs font-bold text-amber-400 hover:text-white transition flex items-center gap-1"
+              >
+                Lihat Semua Layanan →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {activeCategoryData.items.map((service, index) => (
+                <div
+                  key={index}
+                  className="bg-[#141414] border border-white/10 rounded-3xl overflow-hidden shadow-xl hover:border-amber-400/50 transition flex flex-col justify-between group"
+                >
+                  <div className="relative h-44 sm:h-48 w-full overflow-hidden bg-[#1A1A1A]">
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-black/30" />
+
+                    <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 flex items-center gap-1 text-[11px] font-bold text-white shadow">
+                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                      <span>{service.rating}</span>
+                      <span className="text-white/40 text-[9px]">
+                        {service.reviews}
+                      </span>
+                    </div>
+
+                    <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 flex items-center gap-1.5 text-[10px] font-medium text-white/90">
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      <span>Estimasi: {service.estimasi}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-5 flex flex-col flex-1 justify-between space-y-4">
+                    <div>
+                      <h3 className="text-base font-black text-white group-hover:text-amber-400 transition tracking-tight">
+                        {service.title}
+                      </h3>
+                    </div>
+
+                    <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                      <div>
+                        <span className="block text-[9px] font-bold text-white/40 uppercase tracking-wider">
+                          Harga Mulai
+                        </span>
+                        <span className="text-sm sm:text-base font-black text-white">
+                          {service.harga}
+                        </span>
+                      </div>
+
+                      <Link
+                        href="/booking"
+                        className="bg-[#222222] hover:bg-amber-400 hover:text-black text-white text-xs font-bold px-4 py-2 rounded-xl border border-white/10 transition shadow"
+                      >
+                        Detail
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {pendingDeposit ? (
@@ -571,11 +881,13 @@ export default function HomePage() {
           </div>
         </section>
 
-        <PopularServices />
+        {/* 4. QuickBooking Section */}
+        <QuickBooking />
+
         <PromoSlider />
         <CostEstimator />
         <CTA />
-      </main>
+      </div>
 
       <Footer />
     </div>
